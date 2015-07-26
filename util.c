@@ -5,13 +5,15 @@
 
 #include "util.h"
 
+#include <errno.h>
 #include <stdio.h>
 
-void print_error(char *name) {
-    fprintf(stderr, "zhsh: ");
+void print_err(char *name) {
+    fprintf(stderr, ZHSH_ERROR_PREFIX);
     perror(name);
+    errno = 0;
 }
 
-void print_error_message(char *name, char *message) {
-    fprintf(stderr, "zhsh: %s: %s\n", name, message);
+void print_err_msg(char *name, char *msg) {
+    fprintf(stderr, "%s%s: %s\n", ZHSH_ERROR_PREFIX, name, msg);
 }

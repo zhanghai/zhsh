@@ -27,23 +27,19 @@ bool exec_builtin(char **tokens) {
         // Try to cd to $HOME when no argument is given.
         char *dir = tokens[1] ? tokens[1] : getenv("HOME");
         if (!dir) {
-            print_error_message("cd", "HOME not set");
+            print_err_msg("cd", "HOME not set");
             exit_status = EXIT_BUILTIN_FAILURE;
         } else {
             chdir(dir);
             if (errno) {
-                print_error("chdir");
+                print_err("chdir");
                 exit_status = EXIT_BUILTIN_FAILURE;
             }
         }
     } else if (strcmp(tokens[0], "export") == 0) {
         // export.
         // Iterate through each name-value pair.
-        for (size_t i = 1; ; ++i) {
-            char *pair = tokens[i];
-            if (!pair) {
-                break;
-            }
+        for (char **token_i = &tokens[1], *pair; (pair = *token_i); ++token_i) {
             // name=value is delimited by the first =, and no space is allowed around it, so it is within this token.
             char *delimiter = strchr(pair, '=');
             if (!delimiter) {
@@ -58,7 +54,7 @@ bool exec_builtin(char **tokens) {
             setenv(name, value, true);
             free(name);
             if (errno) {
-                print_error("setenv");
+                print_err("setenv");
                 exit_status = EXIT_BUILTIN_FAILURE;
                 // Fail fast.
                 break;
@@ -67,14 +63,10 @@ bool exec_builtin(char **tokens) {
     } else if (strcmp(tokens[0], "unset") == 0) {
         // unset.
         // Iterate through each name-value pair.
-        for (size_t i = 1; ; ++i) {
-            char *name = tokens[i];
-            if (!name) {
-                break;
-            }
+        for (char **token_i = &tokens[1], *name; (name = *token_i); ++token_i) {
             unsetenv(name);
             if (errno) {
-                print_error("unsetenv");
+                print_err("unsetenv");
                 exit_status = EXIT_BUILTIN_FAILURE;
                 // Fail fast.
                 break;
@@ -86,20 +78,29 @@ bool exec_builtin(char **tokens) {
     return true;
 }
 
-void exec_system(char **tokens, bool wait) {
+void exec_sys(char **tokens, int **fdmaps, bool wait) {
 
-    // fork() and execvp().
+    // fork
     pid_t cpid = fork();
     if (errno) {
-        print_error("fork");
+        print_err("fork");
         exit_status = EXIT_INTERNAL_FAILURE;
         return;
     }
     if (!cpid) {
         // Child process
+        // I/O redirection with dup2
+        for (int **fdmap_i = fdmaps, *fdmap; (fdmap = *fdmap_i); ++fdmap_i) {
+            dup2(fdmap[1], fdmap[0]);
+            if (errno) {
+                print_err("dup2");
+                exit(EXIT_INTERNAL_FAILURE);
+            }
+        }
+        // exec
         execvp(tokens[0], tokens);
         if (errno) {
-            print_error(tokens[0]);
+            print_err(tokens[0]);
             exit(EXIT_INTERNAL_FAILURE);
         }
     }
@@ -111,7 +112,7 @@ void exec_system(char **tokens, bool wait) {
     int status;
     waitpid(cpid, &status, WUNTRACED | WCONTINUED);
     if (errno) {
-        print_error("waitpid");
+        print_err("waitpid");
         exit_status = EXIT_INTERNAL_FAILURE;
         return;
     }
@@ -129,28 +130,28 @@ void exec_system(char **tokens, bool wait) {
     }
 }
 
-void exec_command(char *command, bool wait) {
+void exec_cmd(char *cmd, bool wait) {
 
     // TODO: IO redirection.
 
     // Tokenize.
     // Make a copy so that the original command is not tempered by strtok().
-    command = strdup(command);
+    cmd = strdup(cmd);
     if (errno) {
-        print_error("strdup");
+        print_err("strdup");
         exit_status = EXIT_INTERNAL_FAILURE;
         return;
     }
     char **tokens = NULL;
     for (size_t argc = 0; ; ++argc) {
         tokens = realloc(tokens, (argc + 1) * sizeof(tokens[0]));
-        if (!tokens) {
-            print_error("realloc");
+        if (errno) {
+            print_err("realloc");
             exit_status = EXIT_INTERNAL_FAILURE;
             return;
         }
         if (argc == 0) {
-            tokens[argc] = strtok(command, TOKEN_DELIMITERS);
+            tokens[argc] = strtok(cmd, TOKEN_DELIMITERS);
         } else {
             tokens[argc] = strtok(NULL, TOKEN_DELIMITERS);
         }
@@ -165,18 +166,18 @@ void exec_command(char *command, bool wait) {
         // Default to EXIT_SUCCESS.
         exit_status = EXIT_SUCCESS;
         if (!exec_builtin(tokens)) {
-            exec_system(tokens, wait);
+            exec_sys(tokens, wait);
         }
     }
     free(tokens);
-    free(command);
+    free(cmd);
 }
 
 void exec_line(char *line) {
     // Make a copy because we are going to tamper the string.
     line = strdup(line);
     if (errno) {
-        print_error("strdup");
+        print_err("strdup");
         exit_status = EXIT_INTERNAL_FAILURE;
         return;
     }
@@ -189,12 +190,12 @@ void exec_line(char *line) {
             break;
         }
         command_end[0] = '\0';
-        exec_command(command, false);
+        exec_cmd(command, false);
         command = command_end + 1;
     }
     if (command[0]) {
         // Execute the last command with wait.
-        exec_command(command, true);
+        exec_cmd(command, true);
     }
     free(line);
 }
