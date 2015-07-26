@@ -46,18 +46,22 @@ bool exec_builtin(char **tokens) {
             }
             // name=value is delimited by the first =, and no space is allowed around it, so it is within this token.
             char *delimiter = strchr(pair, '=');
-            // If = is not found, simply ignore the "pair".
-            if (delimiter) {
-                char *name = strndup(pair, delimiter - pair);
-                char *value = delimiter + 1;
-                setenv(name, value, true);
-                free(name);
-                if (errno) {
-                    print_error("setenv");
-                    exit_status = EXIT_BUILTIN_FAILURE;
-                    // Fail fast.
-                    break;
-                }
+            if (!delimiter) {
+                // If = is not found, simply ignore the "pair".
+                continue;
+            }
+            char *name = strndup(pair, delimiter - pair);
+            char *value = delimiter + 1;
+            // Don't use putenv(); it removes the environment variable if no = is found, contrary to common behavior of
+            // export. And setenv() is required in POSIX while putenv() is not.
+            // See also http://stackoverflow.com/questions/5873029/questions-about-putenv-and-setenv .
+            setenv(name, value, true);
+            free(name);
+            if (errno) {
+                print_error("setenv");
+                exit_status = EXIT_BUILTIN_FAILURE;
+                // Fail fast.
+                break;
             }
         }
     } else if (strcmp(tokens[0], "unset") == 0) {
