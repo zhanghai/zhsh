@@ -11,12 +11,10 @@
 
 #include "util.h"
 
-#define TOKEN_DELIMITERS " \t\n\v\f\r"
+static int exit_status;
 
-#define EXIT_INTERNAL_FAILURE -1
-#define EXIT_BUILTIN_FAILURE -2
-
-int exit_status;
+#define ZHSH_EXIT_INTERNAL_FAILURE -1
+#define ZHSH_EXIT_BUILTIN_FAILURE -2
 
 bool exec_builtin(char **tokens) {
     if (strcmp(tokens[0], "exit") == 0) {
@@ -28,12 +26,12 @@ bool exec_builtin(char **tokens) {
         char *dir = tokens[1] ? tokens[1] : getenv("HOME");
         if (!dir) {
             print_err_msg("cd", "HOME not set");
-            exit_status = EXIT_BUILTIN_FAILURE;
+            exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
         } else {
             chdir(dir);
             if (errno) {
                 print_err("chdir");
-                exit_status = EXIT_BUILTIN_FAILURE;
+                exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
             }
         }
     } else if (strcmp(tokens[0], "export") == 0) {
@@ -55,7 +53,7 @@ bool exec_builtin(char **tokens) {
             free(name);
             if (errno) {
                 print_err("setenv");
-                exit_status = EXIT_BUILTIN_FAILURE;
+                exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
                 // Fail fast.
                 break;
             }
@@ -67,7 +65,7 @@ bool exec_builtin(char **tokens) {
             unsetenv(name);
             if (errno) {
                 print_err("unsetenv");
-                exit_status = EXIT_BUILTIN_FAILURE;
+                exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
                 // Fail fast.
                 break;
             }
@@ -84,7 +82,7 @@ void exec_sys(char **tokens, int **fdmaps, bool wait) {
     pid_t cpid = fork();
     if (errno) {
         print_err("fork");
-        exit_status = EXIT_INTERNAL_FAILURE;
+        exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
         return;
     }
     if (!cpid) {
@@ -94,14 +92,14 @@ void exec_sys(char **tokens, int **fdmaps, bool wait) {
             dup2(fdmap[1], fdmap[0]);
             if (errno) {
                 print_err("dup2");
-                exit(EXIT_INTERNAL_FAILURE);
+                exit(ZHSH_EXIT_INTERNAL_FAILURE);
             }
         }
         // exec
         execvp(tokens[0], tokens);
         if (errno) {
             print_err(tokens[0]);
-            exit(EXIT_INTERNAL_FAILURE);
+            exit(ZHSH_EXIT_INTERNAL_FAILURE);
         }
     }
 
@@ -113,7 +111,7 @@ void exec_sys(char **tokens, int **fdmaps, bool wait) {
     waitpid(cpid, &status, WUNTRACED | WCONTINUED);
     if (errno) {
         print_err("waitpid");
-        exit_status = EXIT_INTERNAL_FAILURE;
+        exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
         return;
     }
     exit_status = WEXITSTATUS(status);
@@ -139,7 +137,7 @@ void exec_cmd(char *cmd, bool wait) {
     cmd = strdup(cmd);
     if (errno) {
         print_err("strdup");
-        exit_status = EXIT_INTERNAL_FAILURE;
+        exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
         return;
     }
     char **tokens = NULL;
@@ -147,7 +145,7 @@ void exec_cmd(char *cmd, bool wait) {
         tokens = realloc(tokens, (argc + 1) * sizeof(tokens[0]));
         if (errno) {
             print_err("realloc");
-            exit_status = EXIT_INTERNAL_FAILURE;
+            exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
             return;
         }
         if (argc == 0) {
@@ -173,12 +171,50 @@ void exec_cmd(char *cmd, bool wait) {
     free(cmd);
 }
 
+static char *TOKEN_DELIMS[] = {
+        " ",
+        "\t",
+        "\n",
+        "\v",
+        "\f",
+        "\r"
+};
+
+static char *TOKEN_PUNCTS[] = {
+        "<",
+        ">",
+        ">>",
+        "&",
+        "&&",
+        "|",
+        "||",
+        ";"
+};
+
+char **tokenize_line(char *line) {
+    char **tokens = NULL;
+    char *str = line;
+    for (size_t length = 0; ; ++length) {
+        tokens = strarr_realloc(tokens, length + 1);
+        if (errno) {
+            free(tokens);
+            // Keep errno so it can be handled by caller.
+            return NULL;
+        }
+        tokens[length] = tokenize_str(&str, TOKEN_DELIMS, TOKEN_PUNCTS);
+        if (!tokens[length]) {
+            // tokens has been null terminated now.
+            break;
+        }
+    }
+}
+
 void exec_line(char *line) {
     // Make a copy because we are going to tamper the string.
     line = strdup(line);
     if (errno) {
         print_err("strdup");
-        exit_status = EXIT_INTERNAL_FAILURE;
+        exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
         return;
     }
     char *command = line;
