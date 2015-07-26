@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.2)
 project(zhsh)
 
-set(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Werror")
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(Readline REQUIRED)

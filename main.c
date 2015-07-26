@@ -21,11 +21,9 @@ int exit_status;
 bool exec_builtin(char **tokens) {
     if (strcmp(tokens[0], "exit") == 0) {
         // exit.
-        exit_status = EXIT_SUCCESS;
         exit(EXIT_SUCCESS);
     } else if (strcmp(tokens[0], "cd") == 0) {
         // cd.
-        exit_status = EXIT_SUCCESS;
         // Try to cd to $HOME when no argument is given.
         char *dir = tokens[1] ? tokens[1] : getenv("HOME");
         if (!dir) {
@@ -40,7 +38,6 @@ bool exec_builtin(char **tokens) {
         }
     } else if (strcmp(tokens[0], "export") == 0) {
         // export.
-        exit_status = EXIT_SUCCESS;
         // Iterate through each name-value pair.
         for (size_t i = 1; ; ++i) {
             char *pair = tokens[i];
@@ -65,7 +62,6 @@ bool exec_builtin(char **tokens) {
         }
     } else if (strcmp(tokens[0], "unset") == 0) {
         // unset.
-        exit_status = EXIT_SUCCESS;
         // Iterate through each name-value pair.
         for (size_t i = 1; ; ++i) {
             char *name = tokens[i];
@@ -105,8 +101,6 @@ void exec_system(char **tokens, bool wait) {
     }
 
     if (!wait) {
-        // Executing a command in background is taken as success, as per bash implementation.
-        exit_status = EXIT_SUCCESS;
         return;
     }
     // Wait for child process and set exit status.
@@ -164,6 +158,8 @@ void exec_command(char *command, bool wait) {
 
     if (tokens[0]) {
         // tokens is not empty, execute the command.
+        // Default to EXIT_SUCCESS.
+        exit_status = EXIT_SUCCESS;
         if (!exec_builtin(tokens)) {
             exec_system(tokens, wait);
         }
@@ -212,12 +208,9 @@ void loop() {
 }
 
 int main(int argc, char *argv[]) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wmissing-noreturn"
     while (true) {
         loop();
     }
-#pragma clang diagnostic pop
     // Never gets here.
     return EXIT_FAILURE;
 }
