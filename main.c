@@ -173,7 +173,7 @@ void exec_command(char *command, bool wait) {
 }
 
 void exec_line(char *line) {
-    // Make a copy because we are going temper the string.
+    // Make a copy because we are going to tamper the string.
     line = strdup(line);
     if (errno) {
         print_error("strdup");
