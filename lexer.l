@@ -14,7 +14,7 @@
 
 %%
 
-[ \t\n\v\f\r] {}
+[ \t\n\v\f\r] { return SPACE; }
 
 "<" { return REDIRECT_INPUT_FROM_FILE; }
 "<&" { return REDIRECT_INPUT_FROM_FILE_DESCRIPTOR; }
@@ -24,7 +24,6 @@
 ">>&" { return REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR; }
 "|" { return PIPE; }
 "&" { return BACKGROUND; }
-"!" { return NOT; }
 "||" { return OR; }
 "&&" { return AND; }
 
@@ -32,27 +31,37 @@
 .+ { return FRAGMENT; }
 
 <*> "\\" { yy_push_state(ESCAPE); }
-<ESCAPE> . { yymore(); yy_pop_state(); }
-<ESCAPE> <<EOF>> { return -1; }
+<ESCAPE> {
+    [.\n] { yy_pop_state(); return ESCAPED_CHAR; }
+    <<EOF>> { return -1; }
+}
 
 <INITIAL, COMMAND_SUBSTITUTION, DOUBLE_QUOTED_STRING> "${" { yy_push_state(VARIABLE_SUBSTITUTION); return VARIABLE_SUBSTITUTION_START; }
-<VARIABLE_SUBSTITUTION> [a-zA-Z][a-zA-Z0-9_]* { return VARIABLE_SUBSTITUTION_NAME; }
-<VARIABLE_SUBSTITUTION> "}" { yy_pop_state(); return VARIABLE_SUBSTITUTION_END; }
-<VARIABLE_SUBSTITUTION> . { return -2; }
-<VARIABLE_SUBSTITUTION> <<EOF>> { return -1; }
+<VARIABLE_SUBSTITUTION> {
+    [a-zA-Z][a-zA-Z0-9_]* { return VARIABLE_SUBSTITUTION_NAME; }
+    "}" { yy_pop_state(); return VARIABLE_SUBSTITUTION_END; }
+    . { return -2; }
+    <<EOF>> { return -1; }
+}
 
 <INITIAL, COMMAND_SUBSTITUTION, DOUBLE_QUOTED_STRING> "$(" { yy_push_state(COMMAND_SUBSTITUTION); return COMMAND_SUBSTITUTION_START; }
-<COMMAND_SUBSTITUTION> "}" { yy_pop_state(); return COMMAND_SUBSTITUTION_END; }
-<COMMAND_SUBSTITUTION> <<EOF>> { return -1; }
+<COMMAND_SUBSTITUTION> {
+    "}" { yy_pop_state(); return COMMAND_SUBSTITUTION_END; }
+    <<EOF>> { return -1; }
+}
 
 <INITIAL, COMMAND_SUBSTITUTION> "'" { yy_push_state(SINGLE_QUOTED_STRING); return SINGLE_QUOTED_STRING_START; }
-<SINGLE_QUOTED_STRING> . { return SINGLE_QUOTED_STRING_FRAGMENT; }
-<SINGLE_QUOTED_STRING> "\'" { yy_pop_state(SINGLE_QUOTED_STRING); return SINGLE_QUOTED_STRING_END; }
-<SINGLE_QUOTED_STRING> <<EOF>> { return -1; }
+<SINGLE_QUOTED_STRING> {
+    [^\\\']+ { return SINGLE_QUOTED_STRING_FRAGMENT; }
+    "\'" { yy_pop_state(SINGLE_QUOTED_STRING); return SINGLE_QUOTED_STRING_END; }
+    <<EOF>> { return -1; }
+}
 
 <INITIAL, COMMAND_SUBSTITUTION> "\"" { yy_push_state(DOUBLE_QUOTED_STRING); return DOUBLE_QUOTED_STRING_START; }
-<DOUBLE_QUOTED_STRING> . { return DOUBLE_QUOTED_STRING_FRAGMENT; }
-<DOUBLE_QUOTED_STRING> "\'" { yy_pop_state(DOUBLE_QUOTED_STRING); return DOUBLE_QUOTED_STRING_END; }
-<DOUBLE_QUOTED_STRING> <<EOF>> { return -1; }
+<DOUBLE_QUOTED_STRING> {
+    [^\\\"\$]+ { return DOUBLE_QUOTED_STRING_FRAGMENT; }
+    "\'" { yy_pop_state(DOUBLE_QUOTED_STRING); return DOUBLE_QUOTED_STRING_END; }
+    <<EOF>> { return -1; }
+}
 
 %%
