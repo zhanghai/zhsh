@@ -30,6 +30,10 @@ char **strarr_realloc(char **strarr, size_t length);
  */
 void strarr_free(char **strarr);
 
+char ** strarrarr_realloc(char ***strarrarr, size_t length);
+
+void strarrarr_free(char ***strarrarr);
+
 /**
  * Tokenize a string. The return string array should be freed with {@link strarr_free}.
  *

@@ -22,6 +22,17 @@ void strarr_free(char **strarr) {
     free(strarr);
 }
 
+char **strarrarr_realloc(char ***strarrarr, size_t length) {
+    return realloc(strarrarr, length * sizeof(strarrarr[0]));
+}
+
+void strarrarr_free(char ***strarrarr) {
+    for (char ***strarr_i = strarrarr, **strarr; (strarr = *strarr_i); ++strarr_i) {
+        strarr_free(strarr);
+    }
+    free(strarrarr);
+}
+
 static bool is_char_escaped(char *str, char *ch, char escape) {
     char *escape_start = ch;
     while (escape_start > str && escape_start[-1] == escape) {

@@ -32,6 +32,7 @@ command ::= command SPACE REDIRECT_INPUT_FROM_FILE argument .
 command ::= command REDIRECT_INPUT_FROM_FILE SPACE argument .
 // FIXME: This fails LALR(1).
 command ::= command SPACE REDIRECT_INPUT_FROM_FILE SPACE argument .
+// FIXME: Space is not handled here.
 command ::= command REDIRECT_INPUT_FROM_FILE_DESCRIPTOR argument .
 command ::= command REDIRECT_OUTPUT_TO_FILE argument .
 command ::= command REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR argument .
