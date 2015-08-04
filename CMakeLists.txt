@@ -10,6 +10,6 @@ find_package(FLEX REQUIRED)
 
 FLEX_TARGET(zhsh_line_lexer line_lexer.l line_lexer.c COMPILE_FLAGS --header-file=line_lexer.h)
 
-set(SOURCE_FILES main.c util.h util.c)
+set(SOURCE_FILES main.c util.h util.c line_syntax.h)
 add_executable(${CMAKE_PROJECT_NAME} ${SOURCE_FILES} ${FLEX_zhsh_line_lexer_OUTPUTS})
 target_link_libraries(${CMAKE_PROJECT_NAME} ${READLINE_LIBRARY} ${NCURSES_LIBRARY})
