@@ -14,25 +14,52 @@
 #define ZHSH_NAME "zhsh"
 
 /**
+ * Allocate a NULL-terminated string array.
+ *
+ * @return Allocated string array.
+ */
+char ** strarr_alloc();
+
+/**
  * Reallocate a string array.
  *
  * @param strarr String array.
  * @param length New length.
  *
- * @return The reallocated string array.
+ * @return Reallocated string array.
  */
 char **strarr_realloc(char **strarr, size_t length);
 
 /**
- * Free a string array terminated by NULL.
+ * Free a NULL-terminated string array.
  *
  * @param strarr String array.
  */
 void strarr_free(char **strarr);
 
-char ** strarrarr_realloc(char ***strarrarr, size_t length);
+/**
+ * Allocate a NULL-terminated pointer array.
+ *
+ * @return Allocated pointer array.
+ */
+void ** ptrarr_alloc();
 
-void strarrarr_free(char ***strarrarr);
+/**
+ * Reallocate a pointer array.
+ *
+ * @param ptrarr Pointer array.
+ * @param length New length.
+ *
+ * @return Reallocated pointer array.
+ */
+void **ptrarr_realloc(void **ptrarr, size_t length);
+
+/**
+ * Free a NULL-terminated pointer array.
+ *
+ * @param ptrarr Pointer array.
+ */
+void ptrarr_free(void **ptrarr);
 
 /**
  * Tokenize a string. The return string array should be freed with {@link strarr_free}.

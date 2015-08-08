@@ -11,6 +11,12 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+char **strarr_alloc() {
+    char **strarr = strarr_realloc(NULL, 1);
+    strarr[0] = NULL;
+    return strarr;
+}
+
 char **strarr_realloc(char **strarr, size_t length) {
     return realloc(strarr, length * sizeof(strarr[0]));
 }
@@ -22,15 +28,21 @@ void strarr_free(char **strarr) {
     free(strarr);
 }
 
-char **strarrarr_realloc(char ***strarrarr, size_t length) {
-    return realloc(strarrarr, length * sizeof(strarrarr[0]));
+void **ptrarr_alloc() {
+    void **ptrarr = ptrarr_realloc(NULL, 1);
+    ptrarr[0] = NULL;
+    return ptrarr;
 }
 
-void strarrarr_free(char ***strarrarr) {
-    for (char ***strarr_i = strarrarr, **strarr; (strarr = *strarr_i); ++strarr_i) {
-        strarr_free(strarr);
+void **ptrarr_realloc(void **ptrarr, size_t length) {
+    return realloc(ptrarr, length * sizeof(ptrarr[0]));
+}
+
+void ptrarr_free(void **ptrarr) {
+    for (void **ptr_i = ptrarr, *ptr; (ptr = *ptr_i); ++ptr_i) {
+        free(ptr);
     }
-    free(strarrarr);
+    free(ptrarr);
 }
 
 static bool is_char_escaped(char *str, char *ch, char escape) {

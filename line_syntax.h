@@ -1,41 +1,50 @@
+//
+// Copyright (c) 2015 zh
+// All rights reserved.
+//
+
 #ifndef ZHSH_LINE_SYNTAX_H
 #define ZHSH_LINE_SYNTAX_H
+
+#include <stdlib.h>
+
+#include "util.h"
 
 typedef struct {
     int left_fd;
     int type;
-    union {
-        int *fd;
-        char *file;
-    } right;
+    // We are not using a union here, because we need to know whether we need to free file. Binding to the meaning of
+    // type does not seem like a good idea.
+    int *right_fd;
+    char *right_file;
 } redir_t;
 
-redir_t *redir_malloc() {
+redir_t *redir_alloc() {
     redir_t *redir = malloc(sizeof(redir_t));
-    redir->right.file = NULL;
+    redir->right_file = NULL;
+    return redir;
 }
 
 void redir_free(redir_t *redir) {
-    free(redir->right.file);
+    free(redir->right_file);
     free(redir);
 }
 
 typedef struct {
     char **args;
-    redir_t **redirs;
+    void **redirs;
 } cmd_t;
 
-cmd_t *cmd_malloc() {
+cmd_t *cmd_alloc() {
     cmd_t *cmd = malloc(sizeof(cmd_t));
-    cmd->args = NULL;
-    cmd->redirs = NULL;
+    cmd->args = strarr_alloc();
+    cmd->redirs = ptrarr_alloc();
+    return cmd;
 }
 
 void cmd_free(cmd_t *cmd) {
-    // TODO: Free args array content.
-    free(cmd->args);
-    // TODO: Free redirs array content.
-    free(cmd->redirs);
+    strarr_free(cmd->args);
+    ptrarr_free(cmd->redirs);
     free(cmd);
 }
 
