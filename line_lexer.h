@@ -2,9 +2,9 @@
 #define yyHEADER_H 1
 #define yyIN_HEADER 1
 
-#line 6 "line_lexer.h"
+#line 6 "/home/zh/workspace/github/zhsh/line_lexer.h"
 
-#line 8 "line_lexer.h"
+#line 8 "/home/zh/workspace/github/zhsh/line_lexer.h"
 
 #define  YY_INT_ALIGNED short int
 
@@ -335,9 +335,9 @@ extern int yylex (yyscan_t yyscanner);
 #undef YY_DECL
 #endif
 
-#line 69 "line_lexer.l"
+#line 71 "line_lexer.l"
 
 
-#line 342 "line_lexer.h"
+#line 342 "/home/zh/workspace/github/zhsh/line_lexer.h"
 #undef yyIN_HEADER
 #endif /* yyHEADER_H */

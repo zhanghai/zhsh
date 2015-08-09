@@ -24,11 +24,30 @@ char ** strarr_alloc();
  * Reallocate a string array.
  *
  * @param strarr String array.
- * @param length New length.
+ * @param len New length, without the terminating NULL.
  *
  * @return Reallocated string array.
  */
-char **strarr_realloc(char **strarr, size_t length);
+char **strarr_realloc(char **strarr, size_t len);
+
+/**
+ * Get the length of a string array.
+ *
+ * @param strarr String array.
+ *
+ * @return Length of the string array.
+ */
+size_t strarr_len(char **strarr);
+
+/**
+ * Append a string to a string array.
+ *
+ * @param strarr String array.
+ * @param str String.
+ *
+ * @return Reallocated string array.
+ */
+char ** strarr_append(char **strarr, char *str);
 
 /**
  * Free a NULL-terminated string array.
@@ -48,28 +67,40 @@ void ** ptrarr_alloc();
  * Reallocate a pointer array.
  *
  * @param ptrarr Pointer array.
- * @param length New length.
+ * @param len New length, without the terminating NULL.
  *
  * @return Reallocated pointer array.
  */
-void **ptrarr_realloc(void **ptrarr, size_t length);
+void **ptrarr_realloc(void **ptrarr, size_t len);
+
+/**
+ * Get the length of a pointer array.
+ *
+ * @param ptrarr Pointer array.
+ *
+ * @return Length of the pointer array.
+ */
+size_t ptrarr_len(void **ptrarr);
+
+/**
+ * Append a pointer to a pointer array.
+ *
+ * @param ptrarr Pointer array.
+ * @param ptr Pointer.
+ *
+ * @return Reallocated pointer array.
+ */
+void ** ptrarr_append(void **ptrarr, void *ptr);
+
+typedef void (*free_ptr_func_t)(void *ptr);
 
 /**
  * Free a NULL-terminated pointer array.
  *
+ * @param free_ptr_func Function to free pointer.
  * @param ptrarr Pointer array.
  */
-void ptrarr_free(void **ptrarr);
-
-/**
- * Tokenize a string. The return string array should be freed with {@link strarr_free}.
- *
- * @param str_p Pointer to string, also saves the next position for tokenization.
- * @param delims Delimiters that separate tokens, itself discarded.
- * @param puncts Punctuations that separate tokens, but itself can also be a token. The match for punctuation is greedy.
- * @return Tokens obtained from str.
- */
-char *tokenize_str(char **str_p, char **delims, char **puncts);
+void ptrarr_free(void **ptrarr, free_ptr_func_t free_ptr_func);
 
 /**
  * Print error message with perror(), prepended with {@link ZHSH_NAME}. Also resets errno to zero after perror().

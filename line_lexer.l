@@ -1,9 +1,11 @@
 %{
     #include <stdbool.h>
 
+    #include "line_parser.h"
+
     #define finish_last_token(last_token_type, token_length) \
         do { \
-            if (yylength > token_length) { \
+            if (yyleng > token_length) { \
                 yyless(token_length); \
                 return last_token_type; \
             } \
@@ -11,7 +13,7 @@
 
     #define finish_last_token_or_return(last_token_type, token_length, token_type) \
         do { \
-            if (yylength > token_length) { \
+            if (yyleng > token_length) { \
                 yyless(token_length); \
                 return last_token_type; \
             } else { \
@@ -44,23 +46,23 @@
 "&&" { finish_last_token_or_return(ARGUMENT, 2, AND); }
 ";" { finish_last_token_or_return(ARGUMENT, 1, SEMICOLON); }
 
-<INITIAL,DOUBLE_QUOTED>"\\" { yy_push_state(ESCAPED); yymore(); }
+<INITIAL,DOUBLE_QUOTED>"\\" { yy_push_state(ESCAPED, yyscanner); yymore(); }
 <ESCAPED>{
-    . { yy_pop_state(); yymore(); }
+    . { yy_pop_state(yyscanner); yymore(); }
     <<EOF>> { return -1; }
 }
 
-"'" { yy_push_state(SINGLE_QUOTED); return SINGLE_QUOTED_START; }
+"'" { yy_push_state(SINGLE_QUOTED, yyscanner); yymore(); }
 <SINGLE_QUOTED>{
-    "\'" { yy_pop_state(SINGLE_QUOTED); yymore() }
-    .+ { yymore() }
+    "\'" { yy_pop_state(yyscanner); yymore(); }
+    .+ { yymore(); }
     <<EOF>> { return -1; }
 }
 
-"\"" { yy_push_state(DOUBLE_QUOTED); return DOUBLE_QUOTED_START; }
+"\"" { yy_push_state(DOUBLE_QUOTED, yyscanner); yymore(); }
 <DOUBLE_QUOTED>{
-    "\"" { yy_pop_state(DOUBLE_QUOTED); yymore(); }
-    .+ { yymore() }
+    "\"" { yy_pop_state(yyscanner); yymore(); }
+    .+ { yymore(); }
     <<EOF>> { return -1; }
 }
 

@@ -1,4 +1,4 @@
-# from http://websvn.kde.org/trunk/KDE/kdeedu/cmake/modules/FindReadline.cmake
+# From http://websvn.kde.org/trunk/KDE/kdeedu/cmake/modules/FindReadline.cmake
 # http://websvn.kde.org/trunk/KDE/kdeedu/cmake/modules/COPYING-CMAKE-SCRIPTS
 # --> BSD licensed
 #
