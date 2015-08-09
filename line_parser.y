@@ -1,8 +1,11 @@
 %include {
     #include <assert.h>
+    #include <stdlib.h>
+    #include <string.h>
 
     #include "line_parser.h"
     #include "line_syntax.h"
+    #include "util.h"
 }
 
 %token_type { const char * }

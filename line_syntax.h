@@ -6,12 +6,7 @@
 #ifndef ZHSH_LINE_SYNTAX_H
 #define ZHSH_LINE_SYNTAX_H
 
-#include <errno.h>
-#include <limits.h>
-#include <string.h>
-#include <stdlib.h>
-
-#include "util.h"
+#include <stddef.h>
 
 typedef struct {
     int left_fd;
@@ -22,63 +17,24 @@ typedef struct {
     char *right_file;
 } redir_t;
 
-redir_t *redir_alloc() {
-    redir_t *redir = malloc(sizeof(redir_t));
-    if (errno) {
-        return NULL;
-    }
-    redir->right_file = NULL;
-    return redir;
-}
+redir_t * redir_alloc();
 
-void redir_free(redir_t *redir) {
-    free(redir->right_file);
-    free(redir);
-}
+void redir_free(redir_t *redir);
 
-int redir_parse_fd(const char *redir_token) {
-    long fd_l = strtol(redir_token, NULL, 0);
-    if (!errno && (fd_l > INT_MAX || fd_l < INT_MIN)) {
-        errno = ERANGE;
-    }
-    if (errno) {
-        return -1;
-    }
-    return (int) fd_l;
-}
+int redir_parse_fd(const char *redir_token);
 
-int redir_parse_left_fd(const char *redir_token, size_t redir_len, int def_fd) {
-    if (strlen(redir_token) == redir_len) {
-        return def_fd;
-    } else {
-        return redir_parse_fd(redir_token);
-    }
-}
+int redir_parse_left_fd(const char *redir_token, size_t redir_len, int def_fd);
 
 typedef struct {
     char **args;
     void **redirs;
 } cmd_t;
 
-cmd_t *cmd_alloc() {
-    cmd_t *cmd = malloc(sizeof(cmd_t));
-    if (errno) {
-        return NULL;
-    }
-    cmd->args = strarr_alloc();
-    cmd->redirs = ptrarr_alloc();
-    return cmd;
-}
+cmd_t * cmd_alloc();
 
-void cmd_free_redir_func(void *redir) {
-    redir_free((redir_t *) redir);
-}
+void cmd_free_redir_func(void *redir);
 
-void cmd_free(cmd_t *cmd) {
-    strarr_free(cmd->args);
-    ptrarr_free(cmd->redirs, cmd_free_redir_func);
-    free(cmd);
-}
+void cmd_free(cmd_t *cmd);
 
 typedef struct {
     void **cmds;
@@ -86,34 +42,12 @@ typedef struct {
     size_t op_len;
 } cmd_list_t;
 
-cmd_list_t *cmd_list_alloc() {
-    cmd_list_t *cmd_list = malloc(sizeof(cmd_list_t));
-    if (errno) {
-        return NULL;
-    }
-    cmd_list->cmds = ptrarr_alloc();
-    cmd_list->ops = NULL;
-    cmd_list->op_len = 0;
-    return cmd_list;
-}
+cmd_list_t * cmd_list_alloc();
 
-void cmd_list_append_op(cmd_list_t *cmd_list, int op) {
-    cmd_list->ops = realloc(cmd_list->ops, cmd_list->op_len + 1);
-    if (errno) {
-        return;
-    }
-    cmd_list->ops[cmd_list->op_len] = op;
-    ++(cmd_list->op_len);
-}
+void cmd_list_append_op(cmd_list_t *cmd_list, int op);
 
-void cmd_list_free_cmd_func(void *cmd) {
-    cmd_free((cmd_t *) cmd);
-}
+void cmd_list_free_cmd_func(void *cmd);
 
-void cmd_list_free(cmd_list_t *cmd_list) {
-    ptrarr_free(cmd_list->cmds, cmd_list_free_cmd_func);
-    free(cmd_list->ops);
-    free(cmd_list);
-}
+void cmd_list_free(cmd_list_t *cmd_list);
 
 #endif //ZHSH_LINE_SYNTAX_H

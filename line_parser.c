@@ -7,10 +7,13 @@
 #line 1 "line_parser.y"
 
     #include <assert.h>
+    #include <stdlib.h>
+    #include <string.h>
 
     #include "line_parser.h"
     #include "line_syntax.h"
-#line 14 "line_parser.c"
+    #include "util.h"
+#line 17 "line_parser.c"
 /* Next is all token values, in a form suitable for use by makeheaders.
 ** This section will be null unless lemon is run with the -m switch.
 */
@@ -388,39 +391,39 @@ static void yy_destructor(
     */
     case 14: /* argument */
 {
-#line 11 "line_parser.y"
+#line 14 "line_parser.y"
 
     free((yypminor->yy9));
 
-#line 396 "line_parser.c"
+#line 399 "line_parser.c"
 }
       break;
     case 15: /* redirection */
 {
-#line 15 "line_parser.y"
+#line 18 "line_parser.y"
 
     redir_free((yypminor->yy36));
 
-#line 405 "line_parser.c"
+#line 408 "line_parser.c"
 }
       break;
     case 16: /* command */
 {
-#line 19 "line_parser.y"
+#line 22 "line_parser.y"
 
     cmd_free((yypminor->yy32));
 
-#line 414 "line_parser.c"
+#line 417 "line_parser.c"
 }
       break;
     case 17: /* commandList */
     case 18: /* start */
 {
-#line 23 "line_parser.y"
+#line 26 "line_parser.y"
 
     cmd_list_free((yypminor->yy23));
 
-#line 424 "line_parser.c"
+#line 427 "line_parser.c"
 }
       break;
     default:  break;   /* If no destructor action specified: do nothing */
@@ -733,14 +736,14 @@ static void yy_reduce(
   **     break;
   */
       case 0: /* argument ::= ARGUMENT */
-#line 37 "line_parser.y"
+#line 40 "line_parser.y"
 {
     yygotominor.yy9 = strdup(yymsp[0].minor.yy0);
 }
-#line 741 "line_parser.c"
+#line 744 "line_parser.c"
         break;
       case 1: /* redirection ::= REDIRECT_INPUT_FROM_FILE argument */
-#line 41 "line_parser.y"
+#line 44 "line_parser.y"
 {
     yygotominor.yy36 = redir_alloc();
     // FIXME: Should add a test on errno here for ENOMEM.
@@ -749,10 +752,10 @@ static void yy_reduce(
     yygotominor.yy36->type = REDIRECT_INPUT_FROM_FILE;
     yygotominor.yy36->right_file = yymsp[0].minor.yy9;
 }
-#line 753 "line_parser.c"
+#line 756 "line_parser.c"
         break;
       case 2: /* redirection ::= REDIRECT_INPUT_FROM_FILE_DESCRIPTOR argument */
-#line 49 "line_parser.y"
+#line 52 "line_parser.y"
 {
     yygotominor.yy36 = redir_alloc();
     yygotominor.yy36->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 2, 0);
@@ -760,20 +763,20 @@ static void yy_reduce(
     yygotominor.yy36->right_fd = redir_parse_fd(yymsp[0].minor.yy9);
     free(yymsp[0].minor.yy9);
 }
-#line 764 "line_parser.c"
+#line 767 "line_parser.c"
         break;
       case 3: /* redirection ::= REDIRECT_OUTPUT_TO_FILE argument */
-#line 56 "line_parser.y"
+#line 59 "line_parser.y"
 {
     yygotominor.yy36 = redir_alloc();
     yygotominor.yy36->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 1, 1);
     yygotominor.yy36->type = REDIRECT_OUTPUT_TO_FILE;
     yygotominor.yy36->right_file = yymsp[0].minor.yy9;
 }
-#line 774 "line_parser.c"
+#line 777 "line_parser.c"
         break;
       case 4: /* redirection ::= REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR argument */
-#line 62 "line_parser.y"
+#line 65 "line_parser.y"
 {
     yygotominor.yy36 = redir_alloc();
     yygotominor.yy36->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 2, 1);
@@ -781,20 +784,20 @@ static void yy_reduce(
     yygotominor.yy36->right_fd = redir_parse_fd(yymsp[0].minor.yy9);
     free(yymsp[0].minor.yy9);
 }
-#line 785 "line_parser.c"
+#line 788 "line_parser.c"
         break;
       case 5: /* redirection ::= REDIRECT_OUTPUT_APPEND_TO_FILE argument */
-#line 69 "line_parser.y"
+#line 72 "line_parser.y"
 {
     yygotominor.yy36 = redir_alloc();
     yygotominor.yy36->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 1, 1);
     yygotominor.yy36->type = REDIRECT_OUTPUT_APPEND_TO_FILE;
     yygotominor.yy36->right_file = yymsp[0].minor.yy9;
 }
-#line 795 "line_parser.c"
+#line 798 "line_parser.c"
         break;
       case 6: /* redirection ::= REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR argument */
-#line 75 "line_parser.y"
+#line 78 "line_parser.y"
 {
     yygotominor.yy36 = redir_alloc();
     yygotominor.yy36->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 2, 1);
@@ -802,115 +805,115 @@ static void yy_reduce(
     yygotominor.yy36->right_fd = redir_parse_fd(yymsp[0].minor.yy9);
     free(yymsp[0].minor.yy9);
 }
-#line 806 "line_parser.c"
+#line 809 "line_parser.c"
         break;
       case 7: /* command ::= argument */
-#line 83 "line_parser.y"
+#line 86 "line_parser.y"
 {
     yygotominor.yy32 = cmd_alloc();
     strarr_append(yygotominor.yy32->args, yymsp[0].minor.yy9);
 }
-#line 814 "line_parser.c"
+#line 817 "line_parser.c"
         break;
       case 8: /* command ::= redirection */
-#line 87 "line_parser.y"
+#line 90 "line_parser.y"
 {
     yygotominor.yy32 = cmd_alloc();
     ptrarr_append(yygotominor.yy32->redirs, yymsp[0].minor.yy36);
 }
-#line 822 "line_parser.c"
+#line 825 "line_parser.c"
         break;
       case 9: /* command ::= command argument */
-#line 91 "line_parser.y"
+#line 94 "line_parser.y"
 {
     yygotominor.yy32 = yymsp[-1].minor.yy32;
     strarr_append(yygotominor.yy32->args, yymsp[0].minor.yy9);
 }
-#line 830 "line_parser.c"
+#line 833 "line_parser.c"
         break;
       case 10: /* command ::= command redirection */
-#line 95 "line_parser.y"
+#line 98 "line_parser.y"
 {
     yygotominor.yy32 = yymsp[-1].minor.yy32;
     ptrarr_append(yygotominor.yy32->redirs, yymsp[0].minor.yy36);
 }
-#line 838 "line_parser.c"
+#line 841 "line_parser.c"
         break;
       case 11: /* commandList ::= command */
-#line 100 "line_parser.y"
+#line 103 "line_parser.y"
 {
     yygotominor.yy23 = cmd_list_alloc();
     ptrarr_append(yygotominor.yy23->cmds, yymsp[0].minor.yy32);
 }
-#line 846 "line_parser.c"
+#line 849 "line_parser.c"
         break;
       case 12: /* commandList ::= commandList PIPE command */
-#line 104 "line_parser.y"
+#line 107 "line_parser.y"
 {
     yygotominor.yy23 = yymsp[-2].minor.yy23;
     cmd_list_append_op(yygotominor.yy23, PIPE);
     ptrarr_append(yygotominor.yy23->cmds, yymsp[0].minor.yy32);
 }
-#line 855 "line_parser.c"
+#line 858 "line_parser.c"
         break;
       case 13: /* commandList ::= commandList OR command */
-#line 109 "line_parser.y"
+#line 112 "line_parser.y"
 {
     yygotominor.yy23 = yymsp[-2].minor.yy23;
     cmd_list_append_op(yygotominor.yy23, OR);
     ptrarr_append(yygotominor.yy23->cmds, yymsp[0].minor.yy32);
 }
-#line 864 "line_parser.c"
+#line 867 "line_parser.c"
         break;
       case 14: /* commandList ::= commandList AND command */
-#line 114 "line_parser.y"
+#line 117 "line_parser.y"
 {
     yygotominor.yy23 = yymsp[-2].minor.yy23;
     cmd_list_append_op(yygotominor.yy23, AND);
     ptrarr_append(yygotominor.yy23->cmds, yymsp[0].minor.yy32);
 }
-#line 873 "line_parser.c"
+#line 876 "line_parser.c"
         break;
       case 15: /* commandList ::= commandList BACKGROUND command */
-#line 119 "line_parser.y"
+#line 122 "line_parser.y"
 {
     yygotominor.yy23 = yymsp[-2].minor.yy23;
     cmd_list_append_op(yygotominor.yy23, BACKGROUND);
     ptrarr_append(yygotominor.yy23->cmds, yymsp[0].minor.yy32);
 }
-#line 882 "line_parser.c"
+#line 885 "line_parser.c"
         break;
       case 16: /* commandList ::= commandList BACKGROUND */
-#line 124 "line_parser.y"
+#line 127 "line_parser.y"
 {
     yygotominor.yy23 = yymsp[-1].minor.yy23;
     cmd_list_append_op(yygotominor.yy23, BACKGROUND);
 }
-#line 890 "line_parser.c"
+#line 893 "line_parser.c"
         break;
       case 17: /* commandList ::= commandList SEMICOLON command */
-#line 128 "line_parser.y"
+#line 131 "line_parser.y"
 {
     yygotominor.yy23 = yymsp[-2].minor.yy23;
     cmd_list_append_op(yygotominor.yy23, SEMICOLON);
     ptrarr_append(yygotominor.yy23->cmds, yymsp[0].minor.yy32);
 }
-#line 899 "line_parser.c"
+#line 902 "line_parser.c"
         break;
       case 18: /* commandList ::= commandList SEMICOLON */
-#line 133 "line_parser.y"
+#line 136 "line_parser.y"
 {
     yygotominor.yy23 = yymsp[-1].minor.yy23;
     cmd_list_append_op(yygotominor.yy23, SEMICOLON);
 }
-#line 907 "line_parser.c"
+#line 910 "line_parser.c"
         break;
       case 19: /* start ::= commandList */
-#line 138 "line_parser.y"
+#line 141 "line_parser.y"
 {
     yygotominor.yy23 = yymsp[0].minor.yy23;
 }
-#line 914 "line_parser.c"
+#line 917 "line_parser.c"
         break;
       default:
         break;
@@ -958,10 +961,10 @@ static void yy_parse_failed(
   while( yypParser->yyidx>=0 ) yy_pop_parser_stack(yypParser);
   /* Here code is inserted which will be executed whenever the
   ** parser fails */
-#line 31 "line_parser.y"
+#line 34 "line_parser.y"
 
     // TODO
-#line 965 "line_parser.c"
+#line 968 "line_parser.c"
   ParseARG_STORE; /* Suppress warning about unused %extra_argument variable */
 }
 #endif /* YYNOERRORRECOVERY */
