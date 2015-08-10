@@ -10,14 +10,14 @@
 #include <stdlib.h>
 
 char **strarr_alloc() {
-    char **strarr = strarr_realloc(NULL, 0);
+    char **strarr = NULL;
+    strarr_realloc(&strarr, 0);
     return strarr;
 }
 
-char **strarr_realloc(char **strarr, size_t len) {
-    strarr = realloc(strarr, (len + 1) * sizeof(strarr[0]));
-    strarr[len] = NULL;
-    return strarr;
+void strarr_realloc(char ***strarr_p, size_t len) {
+    *strarr_p = realloc(*strarr_p, (len + 1) * sizeof((*strarr_p)[0]));
+    (*strarr_p)[len] = NULL;
 }
 
 size_t strarr_len(char **strarr) {
@@ -26,11 +26,10 @@ size_t strarr_len(char **strarr) {
     return str_i - strarr;
 }
 
-char **strarr_append(char **strarr, char *str) {
-    size_t len = strarr_len(strarr);
-    strarr_realloc(strarr, len + 1);
-    strarr[len] = str;
-    return strarr;
+void strarr_append(char ***strarr_p, char *str) {
+    size_t len = strarr_len(*strarr_p);
+    strarr_realloc(strarr_p, len + 1);
+    (*strarr_p)[len] = str;
 }
 
 void strarr_free(char **strarr) {
@@ -41,14 +40,14 @@ void strarr_free(char **strarr) {
 }
 
 void **ptrarr_alloc() {
-    void **ptrarr = ptrarr_realloc(NULL, 0);
+    void **ptrarr = NULL;
+    ptrarr_realloc(&ptrarr, 0);
     return ptrarr;
 }
 
-void **ptrarr_realloc(void **ptrarr, size_t len) {
-    ptrarr = realloc(ptrarr, (len + 1) * sizeof(ptrarr[0]));
-    ptrarr[len] = NULL;
-    return ptrarr;
+void ptrarr_realloc(void ***ptrarr_p, size_t len) {
+    *ptrarr_p = realloc(*ptrarr_p, (len + 1) * sizeof((*ptrarr_p)[0]));
+    (*ptrarr_p)[len] = NULL;
 }
 
 size_t ptrarr_len(void **ptrarr) {
@@ -57,11 +56,10 @@ size_t ptrarr_len(void **ptrarr) {
     return ptr_i - ptrarr;
 }
 
-void **ptrarr_append(void **ptrarr, void *ptr) {
-    size_t len = ptrarr_len(ptrarr);
-    ptrarr_realloc(ptrarr, len + 1);
-    ptrarr[len] = ptr;
-    return ptrarr;
+void ptrarr_append(void ***ptrarr_p, void *ptr) {
+    size_t len = ptrarr_len(*ptrarr_p);
+    ptrarr_realloc(ptrarr_p, len + 1);
+    (*ptrarr_p)[len] = ptr;
 }
 
 void ptrarr_free(void **ptrarr, free_ptr_func_t free_ptr_func) {

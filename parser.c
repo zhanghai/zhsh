@@ -23,15 +23,20 @@ cmd_list_t *parse_line(const char *line) {
 
     void* shellParser = LineParserAlloc(malloc);
     // Debug
-    LineParserTrace(stderr, "Parser: ");
+    //LineParserTrace(stderr, "Parser: ");
 
     cmd_list_t *cmd_list = NULL;
     int lex_code;
     do {
         lex_code = yylex(scanner);
+        // Token will be freed by %token_destructor in Lemon.
+        char *lex_text = strdup(yyget_text(scanner));
         // Debug
-        fprintf(stderr, "Lexer: %s\n", yyget_text(scanner));
-        LineParser(shellParser, lex_code, yyget_text(scanner), &cmd_list);
+        //fprintf(stderr, "Lexer: code %d, text \"%s\"\n", lex_code, lex_text);
+        if (errno) {
+            break;
+        }
+        LineParser(shellParser, lex_code, lex_text, &cmd_list);
         if (errno) {
             break;
         }

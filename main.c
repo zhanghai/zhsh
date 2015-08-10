@@ -153,7 +153,7 @@ void exec_cmd(cmd_t *cmd, bool wait) {
             case REDIRECT_INPUT_FROM_FILE:
                 fdmap[0] = open(redir->right_file, O_RDONLY | O_CLOEXEC);
                 if (errno) {
-                    perror("open");
+                    print_err("open");
                     exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
                     // FIXME: Should free fds opened by this operation.
                     ptrarr_free(fdmaps, free);
@@ -169,7 +169,7 @@ void exec_cmd(cmd_t *cmd, bool wait) {
                 fdmap[0] = redir->left_fd;
                 fdmap[1] = open(redir->right_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
                 if (errno) {
-                    perror("open");
+                    print_err("open");
                     exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
                     ptrarr_free(fdmaps, free);
                     return;
@@ -183,7 +183,7 @@ void exec_cmd(cmd_t *cmd, bool wait) {
                 fdmap[0] = redir->left_fd;
                 fdmap[1] = open(redir->right_file, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO);
                 if (errno) {
-                    perror("open");
+                    print_err("open");
                     exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
                     ptrarr_free(fdmaps, free);
                     return;
@@ -200,7 +200,7 @@ void exec_cmd(cmd_t *cmd, bool wait) {
                 ptrarr_free(fdmaps, free);
                 return;
         }
-        ptrarr_append(fdmaps, fdmap);
+        ptrarr_append(&fdmaps, fdmap);
     }
 
     // Execute command.
@@ -237,6 +237,7 @@ void exec_line(char *line) {
             op = cmd_list->ops[i];
         }
 
+        // TODO: Pipe.
         //bool pipe = op == PIPE;
         bool wait = op != BACKGROUND;
         bool break_on_success = op == OR;

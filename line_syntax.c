@@ -21,7 +21,7 @@ redir_t *redir_alloc() {
     return redir;
 }
 
-void redir_free(redir_t * redir) {
+void redir_free(redir_t *redir) {
     free(redir->right_file);
     free(redir);
 }

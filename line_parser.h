@@ -1,5 +1,5 @@
-#define ARGUMENT                        1
-#define REDIRECT_INPUT_FROM_FILE        2
+#define REDIRECT_INPUT_FROM_FILE        1
+#define ARGUMENT                        2
 #define REDIRECT_INPUT_FROM_FILE_DESCRIPTOR  3
 #define REDIRECT_OUTPUT_TO_FILE         4
 #define REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR  5

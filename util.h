@@ -23,12 +23,10 @@ char ** strarr_alloc();
 /**
  * Reallocate a string array.
  *
- * @param strarr String array.
+ * @param strarr_p Pointer to string array.
  * @param len New length, without the terminating NULL.
- *
- * @return Reallocated string array.
  */
-char **strarr_realloc(char **strarr, size_t len);
+void strarr_realloc(char ***strarr_p, size_t len);
 
 /**
  * Get the length of a string array.
@@ -42,12 +40,10 @@ size_t strarr_len(char **strarr);
 /**
  * Append a string to a string array.
  *
- * @param strarr String array.
+ * @param strarr_p Pointer to string array.
  * @param str String.
- *
- * @return Reallocated string array.
  */
-char ** strarr_append(char **strarr, char *str);
+void strarr_append(char ***strarr_p, char *str);
 
 /**
  * Free a NULL-terminated string array.
@@ -66,12 +62,10 @@ void ** ptrarr_alloc();
 /**
  * Reallocate a pointer array.
  *
- * @param ptrarr Pointer array.
+ * @param ptrarr_p Pointer to pointer array.
  * @param len New length, without the terminating NULL.
- *
- * @return Reallocated pointer array.
  */
-void **ptrarr_realloc(void **ptrarr, size_t len);
+void ptrarr_realloc(void ***ptrarr_p, size_t len);
 
 /**
  * Get the length of a pointer array.
@@ -85,12 +79,10 @@ size_t ptrarr_len(void **ptrarr);
 /**
  * Append a pointer to a pointer array.
  *
- * @param ptrarr Pointer array.
+ * @param ptrarr_p Pointer to pointer array.
  * @param ptr Pointer.
- *
- * @return Reallocated pointer array.
  */
-void ** ptrarr_append(void **ptrarr, void *ptr);
+void ptrarr_append(void ***ptrarr_p, void *ptr);
 
 typedef void (*free_ptr_func_t)(void *ptr);
 
