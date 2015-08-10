@@ -10,12 +10,18 @@
 
     #include <assert.h>
     #include <errno.h>
+    #include <stdbool.h>
     #include <stdlib.h>
     #include <string.h>
 
     #include "line_syntax.h"
     #include "util.h"
-#line 19 "line_parser.c"
+
+    #define BREAK_IF_ERRNO \
+        if (errno) { \
+            break; \
+        }
+#line 25 "line_parser.c"
 /* Next is all token values, in a form suitable for use by makeheaders.
 ** This section will be null unless lemon is run with the -m switch.
 */
@@ -404,45 +410,45 @@ static void yy_destructor(
     case 11: /* BACKGROUND */
     case 12: /* SEMICOLON */
 {
-#line 16 "line_parser.y"
+#line 22 "line_parser.y"
 
     free((yypminor->yy0));
 
-#line 412 "line_parser.c"
+#line 418 "line_parser.c"
 }
       break;
     case 14: /* redirection */
 {
-#line 21 "line_parser.y"
+#line 27 "line_parser.y"
 
     redir_free((yypminor->yy32));
 
-#line 421 "line_parser.c"
+#line 427 "line_parser.c"
 }
       break;
     case 15: /* command */
 {
-#line 25 "line_parser.y"
+#line 31 "line_parser.y"
 
     cmd_free((yypminor->yy34));
 
-#line 430 "line_parser.c"
+#line 436 "line_parser.c"
 }
       break;
     case 16: /* commandList */
 {
-#line 29 "line_parser.y"
+#line 35 "line_parser.y"
 
     cmd_list_free((yypminor->yy9));
 
-#line 439 "line_parser.c"
+#line 445 "line_parser.c"
 }
       break;
     case 17: /* start */
 {
-#line 33 "line_parser.y"
+#line 39 "line_parser.y"
 
-#line 446 "line_parser.c"
+#line 452 "line_parser.c"
 }
       break;
     default:  break;   /* If no destructor action specified: do nothing */
@@ -754,8 +760,9 @@ static void yy_reduce(
   **     break;
   */
       case 0: /* redirection ::= REDIRECT_INPUT_FROM_FILE ARGUMENT */
-#line 43 "line_parser.y"
+#line 49 "line_parser.y"
 {
+    BREAK_IF_ERRNO
     yygotominor.yy32 = redir_alloc();
     // FIXME: Should add a test on errno here for ENOMEM.
     // errno is set, so on error this will be freed.
@@ -763,177 +770,194 @@ static void yy_reduce(
     yygotominor.yy32->type = REDIRECT_INPUT_FROM_FILE;
     yygotominor.yy32->right_file = yymsp[0].minor.yy0;
 }
-#line 767 "line_parser.c"
+#line 774 "line_parser.c"
         break;
       case 1: /* redirection ::= REDIRECT_INPUT_FROM_FILE_DESCRIPTOR ARGUMENT */
-#line 51 "line_parser.y"
+#line 58 "line_parser.y"
 {
+    BREAK_IF_ERRNO
     yygotominor.yy32 = redir_alloc();
     yygotominor.yy32->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 2, 0);
     yygotominor.yy32->type = REDIRECT_INPUT_FROM_FILE_DESCRIPTOR;
     yygotominor.yy32->right_fd = redir_parse_fd(yymsp[0].minor.yy0);
     free(yymsp[0].minor.yy0);
 }
-#line 778 "line_parser.c"
+#line 786 "line_parser.c"
         break;
       case 2: /* redirection ::= REDIRECT_OUTPUT_TO_FILE ARGUMENT */
-#line 58 "line_parser.y"
+#line 66 "line_parser.y"
 {
+    BREAK_IF_ERRNO
     yygotominor.yy32 = redir_alloc();
     yygotominor.yy32->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 1, 1);
     yygotominor.yy32->type = REDIRECT_OUTPUT_TO_FILE;
     yygotominor.yy32->right_file = yymsp[0].minor.yy0;
 }
-#line 788 "line_parser.c"
+#line 797 "line_parser.c"
         break;
       case 3: /* redirection ::= REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR ARGUMENT */
-#line 64 "line_parser.y"
+#line 73 "line_parser.y"
 {
+    BREAK_IF_ERRNO
     yygotominor.yy32 = redir_alloc();
     yygotominor.yy32->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 2, 1);
     yygotominor.yy32->type = REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR;
     yygotominor.yy32->right_fd = redir_parse_fd(yymsp[0].minor.yy0);
     free(yymsp[0].minor.yy0);
 }
-#line 799 "line_parser.c"
+#line 809 "line_parser.c"
         break;
       case 4: /* redirection ::= REDIRECT_OUTPUT_APPEND_TO_FILE ARGUMENT */
-#line 71 "line_parser.y"
+#line 81 "line_parser.y"
 {
+    BREAK_IF_ERRNO
     yygotominor.yy32 = redir_alloc();
     yygotominor.yy32->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 2, 1);
     yygotominor.yy32->type = REDIRECT_OUTPUT_APPEND_TO_FILE;
     yygotominor.yy32->right_file = yymsp[0].minor.yy0;
 }
-#line 809 "line_parser.c"
+#line 820 "line_parser.c"
         break;
       case 5: /* redirection ::= REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR ARGUMENT */
-#line 77 "line_parser.y"
+#line 88 "line_parser.y"
 {
+    BREAK_IF_ERRNO
     yygotominor.yy32 = redir_alloc();
     yygotominor.yy32->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 3, 1);
     yygotominor.yy32->type = REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR;
     yygotominor.yy32->right_fd = redir_parse_fd(yymsp[0].minor.yy0);
     free(yymsp[0].minor.yy0);
 }
-#line 820 "line_parser.c"
+#line 832 "line_parser.c"
         break;
       case 6: /* command ::= ARGUMENT */
-#line 85 "line_parser.y"
-{
-    yygotominor.yy34 = cmd_alloc();
-    strarr_append(&(yygotominor.yy34->args), yymsp[0].minor.yy0);
-}
-#line 828 "line_parser.c"
-        break;
-      case 7: /* command ::= redirection */
-#line 89 "line_parser.y"
-{
-    yygotominor.yy34 = cmd_alloc();
-    ptrarr_append(&(yygotominor.yy34->redirs), yymsp[0].minor.yy32);
-}
-#line 836 "line_parser.c"
-        break;
-      case 8: /* command ::= command ARGUMENT */
-#line 93 "line_parser.y"
-{
-    yygotominor.yy34 = yymsp[-1].minor.yy34;
-    strarr_append(&(yygotominor.yy34->args), yymsp[0].minor.yy0);
-}
-#line 844 "line_parser.c"
-        break;
-      case 9: /* command ::= command redirection */
 #line 97 "line_parser.y"
 {
+    BREAK_IF_ERRNO
+    yygotominor.yy34 = cmd_alloc();
+    strarr_append(&(yygotominor.yy34->args), yymsp[0].minor.yy0);
+}
+#line 841 "line_parser.c"
+        break;
+      case 7: /* command ::= redirection */
+#line 102 "line_parser.y"
+{
+    BREAK_IF_ERRNO
+    yygotominor.yy34 = cmd_alloc();
+    ptrarr_append(&(yygotominor.yy34->redirs), yymsp[0].minor.yy32);
+}
+#line 850 "line_parser.c"
+        break;
+      case 8: /* command ::= command ARGUMENT */
+#line 107 "line_parser.y"
+{
+    BREAK_IF_ERRNO
+    yygotominor.yy34 = yymsp[-1].minor.yy34;
+    strarr_append(&(yygotominor.yy34->args), yymsp[0].minor.yy0);
+}
+#line 859 "line_parser.c"
+        break;
+      case 9: /* command ::= command redirection */
+#line 112 "line_parser.y"
+{
+    BREAK_IF_ERRNO
     yygotominor.yy34 = yymsp[-1].minor.yy34;
     ptrarr_append(&(yygotominor.yy34->redirs), yymsp[0].minor.yy32);
 }
-#line 852 "line_parser.c"
+#line 868 "line_parser.c"
         break;
       case 10: /* commandList ::= command */
-#line 102 "line_parser.y"
+#line 118 "line_parser.y"
 {
+    BREAK_IF_ERRNO
     yygotominor.yy9 = cmd_list_alloc();
     ptrarr_append(&(yygotominor.yy9->cmds), yymsp[0].minor.yy34);
 }
-#line 860 "line_parser.c"
+#line 877 "line_parser.c"
         break;
       case 11: /* commandList ::= commandList PIPE command */
-#line 106 "line_parser.y"
+#line 123 "line_parser.y"
 {
+    BREAK_IF_ERRNO
     yygotominor.yy9 = yymsp[-2].minor.yy9;
     cmd_list_append_op(yygotominor.yy9, PIPE);
     ptrarr_append(&(yygotominor.yy9->cmds), yymsp[0].minor.yy34);
   yy_destructor(yypParser,8,&yymsp[-1].minor);
 }
-#line 870 "line_parser.c"
+#line 888 "line_parser.c"
         break;
       case 12: /* commandList ::= commandList OR command */
-#line 111 "line_parser.y"
+#line 129 "line_parser.y"
 {
+    BREAK_IF_ERRNO
     yygotominor.yy9 = yymsp[-2].minor.yy9;
     cmd_list_append_op(yygotominor.yy9, OR);
     ptrarr_append(&(yygotominor.yy9->cmds), yymsp[0].minor.yy34);
   yy_destructor(yypParser,9,&yymsp[-1].minor);
 }
-#line 880 "line_parser.c"
+#line 899 "line_parser.c"
         break;
       case 13: /* commandList ::= commandList AND command */
-#line 116 "line_parser.y"
+#line 135 "line_parser.y"
 {
+    BREAK_IF_ERRNO
     yygotominor.yy9 = yymsp[-2].minor.yy9;
     cmd_list_append_op(yygotominor.yy9, AND);
     ptrarr_append(&(yygotominor.yy9->cmds), yymsp[0].minor.yy34);
   yy_destructor(yypParser,10,&yymsp[-1].minor);
 }
-#line 890 "line_parser.c"
+#line 910 "line_parser.c"
         break;
       case 14: /* commandList ::= commandList BACKGROUND command */
-#line 121 "line_parser.y"
+#line 141 "line_parser.y"
 {
+    BREAK_IF_ERRNO
     yygotominor.yy9 = yymsp[-2].minor.yy9;
     cmd_list_append_op(yygotominor.yy9, BACKGROUND);
     ptrarr_append(&(yygotominor.yy9->cmds), yymsp[0].minor.yy34);
   yy_destructor(yypParser,11,&yymsp[-1].minor);
 }
-#line 900 "line_parser.c"
+#line 921 "line_parser.c"
         break;
       case 15: /* commandList ::= commandList BACKGROUND */
-#line 126 "line_parser.y"
+#line 147 "line_parser.y"
 {
+    BREAK_IF_ERRNO
     yygotominor.yy9 = yymsp[-1].minor.yy9;
     cmd_list_append_op(yygotominor.yy9, BACKGROUND);
   yy_destructor(yypParser,11,&yymsp[0].minor);
 }
-#line 909 "line_parser.c"
+#line 931 "line_parser.c"
         break;
       case 16: /* commandList ::= commandList SEMICOLON command */
-#line 130 "line_parser.y"
+#line 152 "line_parser.y"
 {
+    BREAK_IF_ERRNO
     yygotominor.yy9 = yymsp[-2].minor.yy9;
     cmd_list_append_op(yygotominor.yy9, SEMICOLON);
     ptrarr_append(&(yygotominor.yy9->cmds), yymsp[0].minor.yy34);
   yy_destructor(yypParser,12,&yymsp[-1].minor);
 }
-#line 919 "line_parser.c"
+#line 942 "line_parser.c"
         break;
       case 17: /* commandList ::= commandList SEMICOLON */
-#line 135 "line_parser.y"
+#line 158 "line_parser.y"
 {
+    BREAK_IF_ERRNO
     yygotominor.yy9 = yymsp[-1].minor.yy9;
     cmd_list_append_op(yygotominor.yy9, SEMICOLON);
   yy_destructor(yypParser,12,&yymsp[0].minor);
 }
-#line 928 "line_parser.c"
+#line 952 "line_parser.c"
         break;
       case 18: /* start ::= commandList */
-#line 140 "line_parser.y"
+#line 164 "line_parser.y"
 {
-    yygotominor.yy25 = NULL;
+    BREAK_IF_ERRNO
     // Save our AST from being freed by Lemon!
     *cmd_list_p = yymsp[0].minor.yy9;
 }
-#line 937 "line_parser.c"
+#line 961 "line_parser.c"
         break;
       default:
         break;
@@ -981,10 +1005,10 @@ static void yy_parse_failed(
   while( yypParser->yyidx>=0 ) yy_pop_parser_stack(yypParser);
   /* Here code is inserted which will be executed whenever the
   ** parser fails */
-#line 37 "line_parser.y"
+#line 43 "line_parser.y"
 
     errno = EINVAL;
-#line 988 "line_parser.c"
+#line 1012 "line_parser.c"
   LineParserARG_STORE; /* Suppress warning about unused %extra_argument variable */
 }
 #endif /* YYNOERRORRECOVERY */

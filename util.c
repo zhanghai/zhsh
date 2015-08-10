@@ -33,6 +33,9 @@ void strarr_append(char ***strarr_p, char *str) {
 }
 
 void strarr_free(char **strarr) {
+    if (strarr == NULL) {
+        return;
+    }
     for (char **str_i = strarr, *str; (str = *str_i); ++str_i) {
         free(str);
     }
@@ -63,6 +66,9 @@ void ptrarr_append(void ***ptrarr_p, void *ptr) {
 }
 
 void ptrarr_free(void **ptrarr, free_ptr_func_t free_ptr_func) {
+    if (ptrarr == NULL) {
+        return;
+    }
     for (void **ptr_i = ptrarr, *ptr; (ptr = *ptr_i); ++ptr_i) {
         free_ptr_func(ptr);
     }
