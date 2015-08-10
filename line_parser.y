@@ -70,13 +70,13 @@ redirection(REDIR) ::= REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR(ROTFD) ARGUMENT(ARG) .
 }
 redirection(REDIR) ::= REDIRECT_OUTPUT_APPEND_TO_FILE(ROATF) ARGUMENT(ARG) . {
     REDIR = redir_alloc();
-    REDIR->left_fd = redir_parse_left_fd(ROATF, 1, 1);
+    REDIR->left_fd = redir_parse_left_fd(ROATF, 2, 1);
     REDIR->type = REDIRECT_OUTPUT_APPEND_TO_FILE;
     REDIR->right_file = ARG;
 }
 redirection(REDIR) ::= REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR(ROATFD) ARGUMENT(ARG) . {
     REDIR = redir_alloc();
-    REDIR->left_fd = redir_parse_left_fd(ROATFD, 2, 1);
+    REDIR->left_fd = redir_parse_left_fd(ROATFD, 3, 1);
     REDIR->type = REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR;
     REDIR->right_fd = redir_parse_fd(ARG);
     free(ARG);

@@ -801,7 +801,7 @@ static void yy_reduce(
 #line 71 "line_parser.y"
 {
     yygotominor.yy32 = redir_alloc();
-    yygotominor.yy32->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 1, 1);
+    yygotominor.yy32->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 2, 1);
     yygotominor.yy32->type = REDIRECT_OUTPUT_APPEND_TO_FILE;
     yygotominor.yy32->right_file = yymsp[0].minor.yy0;
 }
@@ -811,7 +811,7 @@ static void yy_reduce(
 #line 77 "line_parser.y"
 {
     yygotominor.yy32 = redir_alloc();
-    yygotominor.yy32->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 2, 1);
+    yygotominor.yy32->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 3, 1);
     yygotominor.yy32->type = REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR;
     yygotominor.yy32->right_fd = redir_parse_fd(yymsp[0].minor.yy0);
     free(yymsp[0].minor.yy0);

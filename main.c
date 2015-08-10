@@ -94,10 +94,10 @@ void exec_sys(char **tokens, void **fdmaps, bool wait) {
     }
     if (!cpid) {
         // Child process
-        // I/O redirection with dup2, fdmap[1] will be the same as fdmap[0].
+        // I/O redirection with dup2, fdmap[0] will be the same as fdmap[1].
         for (void **fdmap_i = fdmaps, *fdmap_; (fdmap_ = *fdmap_i); ++fdmap_i) {
             int *fdmap = (int *)fdmap_;
-            dup2(fdmap[0], fdmap[1]);
+            dup2(fdmap[1], fdmap[0]);
             if (errno) {
                 print_err("dup2");
                 exit(ZHSH_EXIT_INTERNAL_FAILURE);
@@ -147,11 +147,13 @@ void exec_cmd(cmd_t *cmd, bool wait) {
     }
     for (void **redir_i = cmd->redirs, *redir_; (redir_ = *redir_i); ++redir_i) {
         redir_t *redir = (redir_t *) redir_;
-        // fdmap[0] is the source, and fdmap[1] is the target.
+        // fdmap[0] will be the same as fdmap[1]
         int *fdmap = malloc(2 * sizeof(int));
+        fdmap[0] = redir->left_fd;
+        fdmap[1] = -1;
         switch (redir->type) {
             case REDIRECT_INPUT_FROM_FILE:
-                fdmap[0] = open(redir->right_file, O_RDONLY | O_CLOEXEC);
+                fdmap[1] = open(redir->right_file, O_RDONLY | O_CLOEXEC);
                 if (errno) {
                     print_err("open");
                     exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
@@ -159,14 +161,11 @@ void exec_cmd(cmd_t *cmd, bool wait) {
                     ptrarr_free(fdmaps, free);
                     return;
                 }
-                fdmap[1] = redir->left_fd;
                 break;
             case REDIRECT_INPUT_FROM_FILE_DESCRIPTOR:
-                fdmap[0] = redir->right_fd;
-                fdmap[1] = redir->left_fd;
+                fdmap[1] = redir->right_fd;
                 break;
             case REDIRECT_OUTPUT_TO_FILE:
-                fdmap[0] = redir->left_fd;
                 fdmap[1] = open(redir->right_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
                 if (errno) {
                     print_err("open");
@@ -176,11 +175,9 @@ void exec_cmd(cmd_t *cmd, bool wait) {
                 }
                 break;
             case REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR:
-                fdmap[0] = redir->left_fd;
                 fdmap[1] = redir->right_fd;
                 break;
             case REDIRECT_OUTPUT_APPEND_TO_FILE:
-                fdmap[0] = redir->left_fd;
                 fdmap[1] = open(redir->right_file, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO);
                 if (errno) {
                     print_err("open");
@@ -190,7 +187,6 @@ void exec_cmd(cmd_t *cmd, bool wait) {
                 }
                 break;
             case REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR:
-                fdmap[0] = redir->left_fd;
                 fdmap[1] = redir->right_fd;
                 break;
             default:
