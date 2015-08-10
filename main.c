@@ -4,17 +4,24 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <fcntl.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #include <readline/readline.h>
-#include <sys/wait.h>
 
+#include "line_parser.h"
+#include "line_syntax.h"
+#include "parser.h"
 #include "util.h"
 
 static int exit_status;
 
 #define ZHSH_EXIT_INTERNAL_FAILURE -1
-#define ZHSH_EXIT_BUILTIN_FAILURE -2
+#define ZHSH_EXIT_PARSER_FAILURE -2
+#define ZHSH_EXIT_BUILTIN_FAILURE -3
+
+// FIXME: errno resume.
 
 bool exec_builtin(char **tokens) {
     if (strcmp(tokens[0], "exit") == 0) {
@@ -76,7 +83,7 @@ bool exec_builtin(char **tokens) {
     return true;
 }
 
-void exec_sys(char **tokens, int **fdmaps, bool wait) {
+void exec_sys(char **tokens, void **fdmaps, bool wait) {
 
     // fork
     pid_t cpid = fork();
@@ -87,9 +94,10 @@ void exec_sys(char **tokens, int **fdmaps, bool wait) {
     }
     if (!cpid) {
         // Child process
-        // I/O redirection with dup2
-        for (int **fdmap_i = fdmaps, *fdmap; (fdmap = *fdmap_i); ++fdmap_i) {
-            dup2(fdmap[1], fdmap[0]);
+        // I/O redirection with dup2, fdmap[1] will be the same as fdmap[0].
+        for (void **fdmap_i = fdmaps, *fdmap_; (fdmap_ = *fdmap_i); ++fdmap_i) {
+            int *fdmap = (int *)fdmap_;
+            dup2(fdmap[0], fdmap[1]);
             if (errno) {
                 print_err("dup2");
                 exit(ZHSH_EXIT_INTERNAL_FAILURE);
@@ -128,115 +136,131 @@ void exec_sys(char **tokens, int **fdmaps, bool wait) {
     }
 }
 
-void exec_cmd(char *cmd, bool wait) {
+void exec_cmd(cmd_t *cmd, bool wait) {
 
-    // TODO: IO redirection.
-
-    // Tokenize.
-    // Make a copy so that the original command is not tempered by strtok().
-    cmd = strdup(cmd);
+    // Build file descriptor map from redir_t.
+    void **fdmaps = ptrarr_alloc();
     if (errno) {
-        print_err("strdup");
+        print_err("ptrarr_alloc");
         exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
         return;
     }
-    char **tokens = NULL;
-    for (size_t argc = 0; ; ++argc) {
-        tokens = realloc(tokens, (argc + 1) * sizeof(tokens[0]));
-        if (errno) {
-            print_err("realloc");
-            exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
-            return;
+    for (void **redir_i = cmd->redirs, *redir_; (redir_ = *redir_i); ++redir_i) {
+        redir_t *redir = (redir_t *) redir_;
+        // fdmap[0] is the source, and fdmap[1] is the target.
+        int *fdmap = malloc(2 * sizeof(int));
+        switch (redir->type) {
+            case REDIRECT_INPUT_FROM_FILE:
+                fdmap[0] = open(redir->right_file, O_RDONLY | O_CLOEXEC);
+                if (errno) {
+                    perror("open");
+                    exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+                    // FIXME: Should free fds opened by this operation.
+                    ptrarr_free(fdmaps, free);
+                    return;
+                }
+                fdmap[1] = redir->left_fd;
+                break;
+            case REDIRECT_INPUT_FROM_FILE_DESCRIPTOR:
+                fdmap[0] = redir->right_fd;
+                fdmap[1] = redir->left_fd;
+                break;
+            case REDIRECT_OUTPUT_TO_FILE:
+                fdmap[0] = redir->left_fd;
+                fdmap[1] = open(redir->right_file, O_WRONLY | O_CREAT | O_TRUNC, S_IRWXU | S_IRWXG | S_IRWXO);
+                if (errno) {
+                    perror("open");
+                    exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+                    ptrarr_free(fdmaps, free);
+                    return;
+                }
+                break;
+            case REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR:
+                fdmap[0] = redir->left_fd;
+                fdmap[1] = redir->right_fd;
+                break;
+            case REDIRECT_OUTPUT_APPEND_TO_FILE:
+                fdmap[0] = redir->left_fd;
+                fdmap[1] = open(redir->right_file, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU | S_IRWXG | S_IRWXO);
+                if (errno) {
+                    perror("open");
+                    exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+                    ptrarr_free(fdmaps, free);
+                    return;
+                }
+                break;
+            case REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR:
+                fdmap[0] = redir->left_fd;
+                fdmap[1] = redir->right_fd;
+                break;
+            default:
+                errno = EINVAL;
+                print_err("redir->type");
+                exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+                ptrarr_free(fdmaps, free);
+                return;
         }
-        if (argc == 0) {
-            tokens[argc] = strtok(cmd, TOKEN_DELIMITERS);
-        } else {
-            tokens[argc] = strtok(NULL, TOKEN_DELIMITERS);
-        }
-        if (!tokens[argc]) {
-            // tokens has been null terminated now.
-            break;
-        }
+        ptrarr_append(fdmaps, fdmap);
     }
 
-    if (tokens[0]) {
-        // tokens is not empty, execute the command.
-        // Default to EXIT_SUCCESS.
-        exit_status = EXIT_SUCCESS;
-        if (!exec_builtin(tokens)) {
-            exec_sys(tokens, wait);
-        }
+    // Execute command.
+    // Default exit status to EXIT_SUCCESS.
+    exit_status = EXIT_SUCCESS;
+    if (!exec_builtin(cmd->args)) {
+        exec_sys(cmd->args, fdmaps, wait);
     }
-    free(tokens);
-    free(cmd);
-}
-
-static char *TOKEN_DELIMS[] = {
-        " ",
-        "\t",
-        "\n",
-        "\v",
-        "\f",
-        "\r"
-};
-
-static char *TOKEN_PUNCTS[] = {
-        "<",
-        ">",
-        ">>",
-        "&",
-        "&&",
-        "|",
-        "||",
-        ";"
-};
-
-char **tokenize_line(char *line) {
-    char **tokens = NULL;
-    char *str = line;
-    for (size_t length = 0; ; ++length) {
-        tokens = strarr_realloc(tokens, length + 1);
-        if (errno) {
-            free(tokens);
-            // Keep errno so it can be handled by caller.
-            return NULL;
-        }
-        tokens[length] = tokenize_str(&str, TOKEN_DELIMS, TOKEN_PUNCTS);
-        if (!tokens[length]) {
-            // tokens has been null terminated now.
-            break;
-        }
-    }
+    // FIXME: Should close the fds opened by this function.
 }
 
 void exec_line(char *line) {
-    // Make a copy because we are going to tamper the string.
-    line = strdup(line);
+
+    // No-op if the line is empty.
+    // TODO.
+
+    // Parse the line.
+    cmd_list_t *cmd_list = parse_line(line);
     if (errno) {
-        print_err("strdup");
-        exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+        print_err("parser");
+        exit_status = ZHSH_EXIT_PARSER_FAILURE;
         return;
     }
-    char *command = line;
-    // Execute commands in background.
-    while (true) {
-        char *command_end = strchr(command, '&');
-        if (!command_end) {
-            // & not found, it's the last command or empty.
+
+    // Execute the line.
+    for (size_t i = 0; ; ++i) {
+
+        cmd_t *cmd = cmd_list->cmds[i];
+        if (!cmd) {
             break;
         }
-        command_end[0] = '\0';
-        exec_cmd(command, false);
-        command = command_end + 1;
+        int op = -1;
+        if (i < cmd_list->op_len) {
+            op = cmd_list->ops[i];
+        }
+
+        //bool pipe = op == PIPE;
+        bool wait = op != BACKGROUND;
+        bool break_on_success = op == OR;
+        bool break_on_failure = op == AND;
+
+        exec_cmd(cmd, wait);
+        if (errno) {
+            // TODO
+        }
+        if (exit_status == EXIT_SUCCESS) {
+            if (break_on_success) {
+                break;
+            }
+        } else {
+            if (break_on_failure) {
+                break;
+            }
+        }
     }
-    if (command[0]) {
-        // Execute the last command with wait.
-        exec_cmd(command, true);
-    }
-    free(line);
+
+    cmd_list_free(cmd_list);
 }
 
-void loop() {
+void rep() {
     char *prompt = "zhsh $ ";
     char *line = readline(prompt);
     if (!line) {
@@ -250,7 +274,8 @@ void loop() {
 
 int main(int argc, char *argv[]) {
     while (true) {
-        loop();
+        errno = 0;
+        rep();
     }
     // Never gets here.
     return EXIT_FAILURE;

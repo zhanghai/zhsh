@@ -6,7 +6,7 @@
     #define finish_last_token(last_token_type, token_length) \
         do { \
             if (yyleng > token_length) { \
-                yyless(token_length); \
+                yyless(yyleng - token_length); \
                 return last_token_type; \
             } \
         } while (false)
@@ -14,10 +14,19 @@
     #define finish_last_token_or_return(last_token_type, token_length, token_type) \
         do { \
             if (yyleng > token_length) { \
-                yyless(token_length); \
+                yyless(yyleng - token_length); \
                 return last_token_type; \
             } else { \
                 return token_type; \
+            } \
+        } while (false)
+    #define finish_last_token_or_terminate(last_token_type, token_length) \
+        do { \
+            if (yyleng > token_length) { \
+                yyless(yyleng - token_length); \
+                return last_token_type; \
+            } else { \
+                yyterminate(); \
             } \
         } while (false)
 %}
@@ -55,17 +64,21 @@
 "'" { yy_push_state(SINGLE_QUOTED, yyscanner); yymore(); }
 <SINGLE_QUOTED>{
     "\'" { yy_pop_state(yyscanner); yymore(); }
-    .+ { yymore(); }
+    . { yymore(); }
     <<EOF>> { return -1; }
 }
 
 "\"" { yy_push_state(DOUBLE_QUOTED, yyscanner); yymore(); }
 <DOUBLE_QUOTED>{
     "\"" { yy_pop_state(yyscanner); yymore(); }
-    .+ { yymore(); }
+    . { yymore(); }
     <<EOF>> { return -1; }
 }
 
-.+ { yymore(); }
+. { yymore(); }
+
+<<EOF>> {
+    finish_last_token_or_terminate(ARGUMENT, 1);
+}
 
 %%

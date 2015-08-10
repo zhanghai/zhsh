@@ -1,12 +1,16 @@
 %include {
+    #include "line_parser.h"
+
     #include <assert.h>
+    #include <errno.h>
     #include <stdlib.h>
     #include <string.h>
 
-    #include "line_parser.h"
     #include "line_syntax.h"
     #include "util.h"
 }
+
+%name LineParser
 
 %token_type { const char * }
 
@@ -31,8 +35,10 @@
     cmd_list_free($$);
 }
 
+%extra_argument { cmd_list_t **cmd_list_p }
+
 %parse_failure {
-    // TODO
+    errno = EINVAL;
 }
 
 %start_symbol start
@@ -138,6 +144,7 @@ commandList(CMD_LIST) ::= commandList(CMD_LIST_) SEMICOLON . {
     cmd_list_append_op(CMD_LIST, SEMICOLON);
 }
 
-start(CMD_LIST) ::= commandList(CMD_LIST_) . {
-    CMD_LIST = CMD_LIST_;
+start(START) ::= commandList(CMD_LIST) . {
+    START = NULL;
+    *cmd_list_p = CMD_LIST;
 }

@@ -6,14 +6,16 @@
 #include <stdio.h>
 #line 1 "line_parser.y"
 
+    #include "line_parser.h"
+
     #include <assert.h>
+    #include <errno.h>
     #include <stdlib.h>
     #include <string.h>
 
-    #include "line_parser.h"
     #include "line_syntax.h"
     #include "util.h"
-#line 17 "line_parser.c"
+#line 19 "line_parser.c"
 /* Next is all token values, in a form suitable for use by makeheaders.
 ** This section will be null unless lemon is run with the -m switch.
 */
@@ -46,18 +48,18 @@
 **                       and nonterminal numbers.  "unsigned char" is
 **                       used if there are fewer than 250 rules and
 **                       states combined.  "int" is used otherwise.
-**    ParseTOKENTYPE     is the data type used for minor tokens given 
+**    LineParserTOKENTYPE     is the data type used for minor tokens given 
 **                       directly to the parser from the tokenizer.
 **    YYMINORTYPE        is the data type used for all minor tokens.
 **                       This is typically a union of many types, one of
-**                       which is ParseTOKENTYPE.  The entry in the union
+**                       which is LineParserTOKENTYPE.  The entry in the union
 **                       for base tokens is called "yy0".
 **    YYSTACKDEPTH       is the maximum depth of the parser's stack.  If
 **                       zero the stack is dynamically sized using realloc()
-**    ParseARG_SDECL     A static variable declaration for the %extra_argument
-**    ParseARG_PDECL     A parameter declaration for the %extra_argument
-**    ParseARG_STORE     Code to store %extra_argument into yypParser
-**    ParseARG_FETCH     Code to extract %extra_argument from yypParser
+**    LineParserARG_SDECL     A static variable declaration for the %extra_argument
+**    LineParserARG_PDECL     A parameter declaration for the %extra_argument
+**    LineParserARG_STORE     Code to store %extra_argument into yypParser
+**    LineParserARG_FETCH     Code to extract %extra_argument from yypParser
 **    YYNSTATE           the combined number of states.
 **    YYNRULE            the number of rules in the grammar
 **    YYERRORSYMBOL      is the code number of the error symbol.  If not
@@ -66,10 +68,10 @@
 #define YYCODETYPE unsigned char
 #define YYNOCODE 20
 #define YYACTIONTYPE unsigned char
-#define ParseTOKENTYPE  const char * 
+#define LineParserTOKENTYPE  const char * 
 typedef union {
   int yyinit;
-  ParseTOKENTYPE yy0;
+  LineParserTOKENTYPE yy0;
   char * yy9;
   cmd_list_t * yy23;
   cmd_t * yy32;
@@ -78,10 +80,10 @@ typedef union {
 #ifndef YYSTACKDEPTH
 #define YYSTACKDEPTH 100
 #endif
-#define ParseARG_SDECL
-#define ParseARG_PDECL
-#define ParseARG_FETCH
-#define ParseARG_STORE
+#define LineParserARG_SDECL  cmd_list_t **cmd_list_p ;
+#define LineParserARG_PDECL , cmd_list_t **cmd_list_p 
+#define LineParserARG_FETCH  cmd_list_t **cmd_list_p  = yypParser->cmd_list_p 
+#define LineParserARG_STORE yypParser->cmd_list_p  = cmd_list_p 
 #define YYNSTATE 30
 #define YYNRULE 20
 #define YY_NO_ACTION      (YYNSTATE+YYNRULE+2)
@@ -233,7 +235,7 @@ struct yyParser {
   int yyidxMax;                 /* Maximum value of yyidx */
 #endif
   int yyerrcnt;                 /* Shifts left before out of the error */
-  ParseARG_SDECL                /* A place to hold %extra_argument */
+  LineParserARG_SDECL                /* A place to hold %extra_argument */
 #if YYSTACKDEPTH<=0
   int yystksz;                  /* Current side of the stack */
   yyStackEntry *yystack;        /* The parser's stack */
@@ -267,7 +269,7 @@ static char *yyTracePrompt = 0;
 ** Outputs:
 ** None.
 */
-void ParseTrace(FILE *TraceFILE, char *zTracePrompt){
+void LineParserTrace(FILE *TraceFILE, char *zTracePrompt){
   yyTraceFILE = TraceFILE;
   yyTracePrompt = zTracePrompt;
   if( yyTraceFILE==0 ) yyTracePrompt = 0;
@@ -348,9 +350,9 @@ static void yyGrowStack(yyParser *p){
 **
 ** Outputs:
 ** A pointer to a parser.  This pointer is used in subsequent calls
-** to Parse and ParseFree.
+** to LineParser and LineParserFree.
 */
-void *ParseAlloc(void *(*mallocProc)(size_t)){
+void *LineParserAlloc(void *(*mallocProc)(size_t)){
   yyParser *pParser;
   pParser = (yyParser*)(*mallocProc)( (size_t)sizeof(yyParser) );
   if( pParser ){
@@ -377,7 +379,7 @@ static void yy_destructor(
   YYCODETYPE yymajor,     /* Type code for object to destroy */
   YYMINORTYPE *yypminor   /* The object to be destroyed */
 ){
-  ParseARG_FETCH;
+  LineParserARG_FETCH;
   switch( yymajor ){
     /* Here is inserted the actions which take place when a
     ** terminal or non-terminal is destroyed.  This can happen
@@ -391,39 +393,39 @@ static void yy_destructor(
     */
     case 14: /* argument */
 {
-#line 14 "line_parser.y"
+#line 18 "line_parser.y"
 
     free((yypminor->yy9));
 
-#line 399 "line_parser.c"
+#line 401 "line_parser.c"
 }
       break;
     case 15: /* redirection */
 {
-#line 18 "line_parser.y"
+#line 22 "line_parser.y"
 
     redir_free((yypminor->yy36));
 
-#line 408 "line_parser.c"
+#line 410 "line_parser.c"
 }
       break;
     case 16: /* command */
 {
-#line 22 "line_parser.y"
+#line 26 "line_parser.y"
 
     cmd_free((yypminor->yy32));
 
-#line 417 "line_parser.c"
+#line 419 "line_parser.c"
 }
       break;
     case 17: /* commandList */
     case 18: /* start */
 {
-#line 26 "line_parser.y"
+#line 30 "line_parser.y"
 
     cmd_list_free((yypminor->yy23));
 
-#line 427 "line_parser.c"
+#line 429 "line_parser.c"
 }
       break;
     default:  break;   /* If no destructor action specified: do nothing */
@@ -463,12 +465,12 @@ static int yy_pop_parser_stack(yyParser *pParser){
 ** Inputs:
 ** <ul>
 ** <li>  A pointer to the parser.  This should be a pointer
-**       obtained from ParseAlloc.
+**       obtained from LineParserAlloc.
 ** <li>  A pointer to a function used to reclaim memory obtained
 **       from malloc.
 ** </ul>
 */
-void ParseFree(
+void LineParserFree(
   void *p,                    /* The parser to be deleted */
   void (*freeProc)(void*)     /* Function used to reclaim memory */
 ){
@@ -485,7 +487,7 @@ void ParseFree(
 ** Return the peak depth of the stack for a parser.
 */
 #ifdef YYTRACKMAXSTACKDEPTH
-int ParseStackPeak(void *p){
+int LineParserStackPeak(void *p){
   yyParser *pParser = (yyParser*)p;
   return pParser->yyidxMax;
 }
@@ -595,7 +597,7 @@ static int yy_find_reduce_action(
 ** The following routine is called if the stack overflows.
 */
 static void yyStackOverflow(yyParser *yypParser, YYMINORTYPE *yypMinor){
-   ParseARG_FETCH;
+   LineParserARG_FETCH;
    yypParser->yyidx--;
 #ifndef NDEBUG
    if( yyTraceFILE ){
@@ -605,7 +607,7 @@ static void yyStackOverflow(yyParser *yypParser, YYMINORTYPE *yypMinor){
    while( yypParser->yyidx>=0 ) yy_pop_parser_stack(yypParser);
    /* Here code is inserted which will execute if the parser
    ** stack every overflows */
-   ParseARG_STORE; /* Suppress warning about unused %extra_argument var */
+   LineParserARG_STORE; /* Suppress warning about unused %extra_argument var */
 }
 
 /*
@@ -698,7 +700,7 @@ static void yy_reduce(
   YYMINORTYPE yygotominor;        /* The LHS of the rule reduced */
   yyStackEntry *yymsp;            /* The top of the parser's stack */
   int yysize;                     /* Amount to pop the stack */
-  ParseARG_FETCH;
+  LineParserARG_FETCH;
   yymsp = &yypParser->yystack[yypParser->yyidx];
 #ifndef NDEBUG
   if( yyTraceFILE && yyruleno>=0 
@@ -736,14 +738,14 @@ static void yy_reduce(
   **     break;
   */
       case 0: /* argument ::= ARGUMENT */
-#line 40 "line_parser.y"
+#line 46 "line_parser.y"
 {
     yygotominor.yy9 = strdup(yymsp[0].minor.yy0);
 }
-#line 744 "line_parser.c"
+#line 746 "line_parser.c"
         break;
       case 1: /* redirection ::= REDIRECT_INPUT_FROM_FILE argument */
-#line 44 "line_parser.y"
+#line 50 "line_parser.y"
 {
     yygotominor.yy36 = redir_alloc();
     // FIXME: Should add a test on errno here for ENOMEM.
@@ -752,10 +754,10 @@ static void yy_reduce(
     yygotominor.yy36->type = REDIRECT_INPUT_FROM_FILE;
     yygotominor.yy36->right_file = yymsp[0].minor.yy9;
 }
-#line 756 "line_parser.c"
+#line 758 "line_parser.c"
         break;
       case 2: /* redirection ::= REDIRECT_INPUT_FROM_FILE_DESCRIPTOR argument */
-#line 52 "line_parser.y"
+#line 58 "line_parser.y"
 {
     yygotominor.yy36 = redir_alloc();
     yygotominor.yy36->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 2, 0);
@@ -763,20 +765,20 @@ static void yy_reduce(
     yygotominor.yy36->right_fd = redir_parse_fd(yymsp[0].minor.yy9);
     free(yymsp[0].minor.yy9);
 }
-#line 767 "line_parser.c"
+#line 769 "line_parser.c"
         break;
       case 3: /* redirection ::= REDIRECT_OUTPUT_TO_FILE argument */
-#line 59 "line_parser.y"
+#line 65 "line_parser.y"
 {
     yygotominor.yy36 = redir_alloc();
     yygotominor.yy36->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 1, 1);
     yygotominor.yy36->type = REDIRECT_OUTPUT_TO_FILE;
     yygotominor.yy36->right_file = yymsp[0].minor.yy9;
 }
-#line 777 "line_parser.c"
+#line 779 "line_parser.c"
         break;
       case 4: /* redirection ::= REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR argument */
-#line 65 "line_parser.y"
+#line 71 "line_parser.y"
 {
     yygotominor.yy36 = redir_alloc();
     yygotominor.yy36->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 2, 1);
@@ -784,20 +786,20 @@ static void yy_reduce(
     yygotominor.yy36->right_fd = redir_parse_fd(yymsp[0].minor.yy9);
     free(yymsp[0].minor.yy9);
 }
-#line 788 "line_parser.c"
+#line 790 "line_parser.c"
         break;
       case 5: /* redirection ::= REDIRECT_OUTPUT_APPEND_TO_FILE argument */
-#line 72 "line_parser.y"
+#line 78 "line_parser.y"
 {
     yygotominor.yy36 = redir_alloc();
     yygotominor.yy36->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 1, 1);
     yygotominor.yy36->type = REDIRECT_OUTPUT_APPEND_TO_FILE;
     yygotominor.yy36->right_file = yymsp[0].minor.yy9;
 }
-#line 798 "line_parser.c"
+#line 800 "line_parser.c"
         break;
       case 6: /* redirection ::= REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR argument */
-#line 78 "line_parser.y"
+#line 84 "line_parser.y"
 {
     yygotominor.yy36 = redir_alloc();
     yygotominor.yy36->left_fd = redir_parse_left_fd(yymsp[-1].minor.yy0, 2, 1);
@@ -805,115 +807,116 @@ static void yy_reduce(
     yygotominor.yy36->right_fd = redir_parse_fd(yymsp[0].minor.yy9);
     free(yymsp[0].minor.yy9);
 }
-#line 809 "line_parser.c"
+#line 811 "line_parser.c"
         break;
       case 7: /* command ::= argument */
-#line 86 "line_parser.y"
+#line 92 "line_parser.y"
 {
     yygotominor.yy32 = cmd_alloc();
     strarr_append(yygotominor.yy32->args, yymsp[0].minor.yy9);
 }
-#line 817 "line_parser.c"
+#line 819 "line_parser.c"
         break;
       case 8: /* command ::= redirection */
-#line 90 "line_parser.y"
+#line 96 "line_parser.y"
 {
     yygotominor.yy32 = cmd_alloc();
     ptrarr_append(yygotominor.yy32->redirs, yymsp[0].minor.yy36);
 }
-#line 825 "line_parser.c"
+#line 827 "line_parser.c"
         break;
       case 9: /* command ::= command argument */
-#line 94 "line_parser.y"
+#line 100 "line_parser.y"
 {
     yygotominor.yy32 = yymsp[-1].minor.yy32;
     strarr_append(yygotominor.yy32->args, yymsp[0].minor.yy9);
 }
-#line 833 "line_parser.c"
+#line 835 "line_parser.c"
         break;
       case 10: /* command ::= command redirection */
-#line 98 "line_parser.y"
+#line 104 "line_parser.y"
 {
     yygotominor.yy32 = yymsp[-1].minor.yy32;
     ptrarr_append(yygotominor.yy32->redirs, yymsp[0].minor.yy36);
 }
-#line 841 "line_parser.c"
+#line 843 "line_parser.c"
         break;
       case 11: /* commandList ::= command */
-#line 103 "line_parser.y"
+#line 109 "line_parser.y"
 {
     yygotominor.yy23 = cmd_list_alloc();
     ptrarr_append(yygotominor.yy23->cmds, yymsp[0].minor.yy32);
 }
-#line 849 "line_parser.c"
+#line 851 "line_parser.c"
         break;
       case 12: /* commandList ::= commandList PIPE command */
-#line 107 "line_parser.y"
+#line 113 "line_parser.y"
 {
     yygotominor.yy23 = yymsp[-2].minor.yy23;
     cmd_list_append_op(yygotominor.yy23, PIPE);
     ptrarr_append(yygotominor.yy23->cmds, yymsp[0].minor.yy32);
 }
-#line 858 "line_parser.c"
+#line 860 "line_parser.c"
         break;
       case 13: /* commandList ::= commandList OR command */
-#line 112 "line_parser.y"
+#line 118 "line_parser.y"
 {
     yygotominor.yy23 = yymsp[-2].minor.yy23;
     cmd_list_append_op(yygotominor.yy23, OR);
     ptrarr_append(yygotominor.yy23->cmds, yymsp[0].minor.yy32);
 }
-#line 867 "line_parser.c"
+#line 869 "line_parser.c"
         break;
       case 14: /* commandList ::= commandList AND command */
-#line 117 "line_parser.y"
+#line 123 "line_parser.y"
 {
     yygotominor.yy23 = yymsp[-2].minor.yy23;
     cmd_list_append_op(yygotominor.yy23, AND);
     ptrarr_append(yygotominor.yy23->cmds, yymsp[0].minor.yy32);
 }
-#line 876 "line_parser.c"
+#line 878 "line_parser.c"
         break;
       case 15: /* commandList ::= commandList BACKGROUND command */
-#line 122 "line_parser.y"
+#line 128 "line_parser.y"
 {
     yygotominor.yy23 = yymsp[-2].minor.yy23;
     cmd_list_append_op(yygotominor.yy23, BACKGROUND);
     ptrarr_append(yygotominor.yy23->cmds, yymsp[0].minor.yy32);
 }
-#line 885 "line_parser.c"
+#line 887 "line_parser.c"
         break;
       case 16: /* commandList ::= commandList BACKGROUND */
-#line 127 "line_parser.y"
+#line 133 "line_parser.y"
 {
     yygotominor.yy23 = yymsp[-1].minor.yy23;
     cmd_list_append_op(yygotominor.yy23, BACKGROUND);
 }
-#line 893 "line_parser.c"
+#line 895 "line_parser.c"
         break;
       case 17: /* commandList ::= commandList SEMICOLON command */
-#line 131 "line_parser.y"
+#line 137 "line_parser.y"
 {
     yygotominor.yy23 = yymsp[-2].minor.yy23;
     cmd_list_append_op(yygotominor.yy23, SEMICOLON);
     ptrarr_append(yygotominor.yy23->cmds, yymsp[0].minor.yy32);
 }
-#line 902 "line_parser.c"
+#line 904 "line_parser.c"
         break;
       case 18: /* commandList ::= commandList SEMICOLON */
-#line 136 "line_parser.y"
+#line 142 "line_parser.y"
 {
     yygotominor.yy23 = yymsp[-1].minor.yy23;
     cmd_list_append_op(yygotominor.yy23, SEMICOLON);
 }
-#line 910 "line_parser.c"
+#line 912 "line_parser.c"
         break;
       case 19: /* start ::= commandList */
-#line 141 "line_parser.y"
+#line 147 "line_parser.y"
 {
-    yygotominor.yy23 = yymsp[0].minor.yy23;
+    yygotominor.yy23 = NULL;
+    *cmd_list_p = yymsp[0].minor.yy23;
 }
-#line 917 "line_parser.c"
+#line 920 "line_parser.c"
         break;
       default:
         break;
@@ -952,7 +955,7 @@ static void yy_reduce(
 static void yy_parse_failed(
   yyParser *yypParser           /* The parser */
 ){
-  ParseARG_FETCH;
+  LineParserARG_FETCH;
 #ifndef NDEBUG
   if( yyTraceFILE ){
     fprintf(yyTraceFILE,"%sFail!\n",yyTracePrompt);
@@ -961,11 +964,11 @@ static void yy_parse_failed(
   while( yypParser->yyidx>=0 ) yy_pop_parser_stack(yypParser);
   /* Here code is inserted which will be executed whenever the
   ** parser fails */
-#line 34 "line_parser.y"
+#line 40 "line_parser.y"
 
-    // TODO
-#line 968 "line_parser.c"
-  ParseARG_STORE; /* Suppress warning about unused %extra_argument variable */
+    errno = EINVAL;
+#line 971 "line_parser.c"
+  LineParserARG_STORE; /* Suppress warning about unused %extra_argument variable */
 }
 #endif /* YYNOERRORRECOVERY */
 
@@ -977,9 +980,9 @@ static void yy_syntax_error(
   int yymajor,                   /* The major type of the error token */
   YYMINORTYPE yyminor            /* The minor type of the error token */
 ){
-  ParseARG_FETCH;
+  LineParserARG_FETCH;
 #define TOKEN (yyminor.yy0)
-  ParseARG_STORE; /* Suppress warning about unused %extra_argument variable */
+  LineParserARG_STORE; /* Suppress warning about unused %extra_argument variable */
 }
 
 /*
@@ -988,7 +991,7 @@ static void yy_syntax_error(
 static void yy_accept(
   yyParser *yypParser           /* The parser */
 ){
-  ParseARG_FETCH;
+  LineParserARG_FETCH;
 #ifndef NDEBUG
   if( yyTraceFILE ){
     fprintf(yyTraceFILE,"%sAccept!\n",yyTracePrompt);
@@ -997,12 +1000,12 @@ static void yy_accept(
   while( yypParser->yyidx>=0 ) yy_pop_parser_stack(yypParser);
   /* Here code is inserted which will be executed whenever the
   ** parser accepts */
-  ParseARG_STORE; /* Suppress warning about unused %extra_argument variable */
+  LineParserARG_STORE; /* Suppress warning about unused %extra_argument variable */
 }
 
 /* The main parser program.
 ** The first argument is a pointer to a structure obtained from
-** "ParseAlloc" which describes the current state of the parser.
+** "LineParserAlloc" which describes the current state of the parser.
 ** The second argument is the major token number.  The third is
 ** the minor token.  The fourth optional argument is whatever the
 ** user wants (and specified in the grammar) and is available for
@@ -1019,11 +1022,11 @@ static void yy_accept(
 ** Outputs:
 ** None.
 */
-void Parse(
+void LineParser(
   void *yyp,                   /* The parser */
   int yymajor,                 /* The major token code number */
-  ParseTOKENTYPE yyminor       /* The value for the token */
-  ParseARG_PDECL               /* Optional %extra_argument parameter */
+  LineParserTOKENTYPE yyminor       /* The value for the token */
+  LineParserARG_PDECL               /* Optional %extra_argument parameter */
 ){
   YYMINORTYPE yyminorunion;
   int yyact;            /* The parser action. */
@@ -1051,7 +1054,7 @@ void Parse(
   }
   yyminorunion.yy0 = yyminor;
   yyendofinput = (yymajor==0);
-  ParseARG_STORE;
+  LineParserARG_STORE;
 
 #ifndef NDEBUG
   if( yyTraceFILE ){
