@@ -1,5 +1,6 @@
+#include "shell.h"
+
 #include <errno.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,24 +15,29 @@
 #include "line_parser.h"
 #include "line_syntax.h"
 #include "parser.h"
-#include "util.h"
+
+#define QUIRK
+
+#ifdef QUIRK
+#include "quirk/quirk.h"
+#endif
 
 static bool is_login_shell;
 
-static int exit_status;
+int exit_status;
 
-#define ZHSH_EXIT_INTERNAL_FAILURE -1
-#define ZHSH_EXIT_PARSER_FAILURE -2
-#define ZHSH_EXIT_BUILTIN_FAILURE -3
+char *get_shell() {
+    return readlink_malloc("/proc/self/exe");
+}
 
 void init(int argc, char **argv) {
 
     is_login_shell = argv[0][0] == '-';
 
     // Set SHELL.
-    char *shell = readlink_malloc("/proc/self/exe");
+    char *shell = get_shell();
     if (errno) {
-        print_err("readlink_malloc");
+        print_err("get_shell");
     } else {
         setenv("SHELL", shell, true);
         if (errno) {
@@ -39,7 +45,6 @@ void init(int argc, char **argv) {
         }
         free(shell);
     }
-    errno = 0;
 }
 
 char *get_prompt_and_set_title() {
@@ -48,17 +53,14 @@ char *get_prompt_and_set_title() {
     char *euname = geteuname();
     if (errno) {
         print_err("geteuname");
-        errno = 0;
     }
     char *hostname = gethostname_malloc();
     if (errno) {
         print_err("gethostname_malloc");
-        errno = 0;
     }
     char *cwd = getcwd_malloc();
     if (errno) {
         print_err("getcwd_malloc");
-        errno = 0;
     }
 
     // Set title.
@@ -93,89 +95,6 @@ char *get_prompt_and_set_title() {
     return prompt;
 }
 
-bool exec_builtin(char **tokens) {
-    if (strcmp(tokens[0], "exit") == 0) {
-        // exit.
-        exit(EXIT_SUCCESS);
-    } else if (strcmp(tokens[0], "cd") == 0) {
-        // cd.
-        // Try to cd to $HOME when no argument is given.
-        char *dir = tokens[1] ? tokens[1] : getenv("HOME");
-        if (!dir) {
-            print_err_msg("cd", "HOME not set");
-            exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
-        } else {
-            chdir(dir);
-            if (errno) {
-                print_err("chdir");
-                exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
-            } else {
-                char *old_pwd = getenv("PWD");
-                if (errno) {
-                    print_err("getenv");
-                    exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
-                } else {
-                    setenv("OLDPWD", old_pwd, true);
-                    if (errno) {
-                        print_err("getenv");
-                        exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
-                        // But still we want to set PWD correctly.
-                    }
-                }
-                int old_errno = errno;
-                errno = 0;
-                setenv("PWD", dir, true);
-                if (errno) {
-                    print_err("setenv");
-                    exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
-                } else {
-                    errno = old_errno;
-                }
-            }
-        }
-    } else if (strcmp(tokens[0], "export") == 0) {
-        // export.
-        // Iterate through each name-value pair.
-        for (char **token_i = &tokens[1], *pair; (pair = *token_i); ++token_i) {
-            // name=value is delimited by the first =, and no space is allowed around it, so it is within this token.
-            char *delimiter = strchr(pair, '=');
-            if (!delimiter) {
-                // If = is not found, simply ignore the "pair".
-                continue;
-            }
-            char *name = strndup(pair, delimiter - pair);
-            char *value = delimiter + 1;
-            // Don't use putenv(); it removes the environment variable if no = is found, contrary to common behavior of
-            // export. And setenv() is required in POSIX while putenv() is not.
-            // See also http://stackoverflow.com/questions/5873029/questions-about-putenv-and-setenv .
-            // setenv() also makes copy of name and value passed in, contrary to putenv().
-            setenv(name, value, true);
-            free(name);
-            if (errno) {
-                print_err("setenv");
-                exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
-                // Fail fast.
-                break;
-            }
-        }
-    } else if (strcmp(tokens[0], "unset") == 0) {
-        // unset.
-        // Iterate through each name-value pair.
-        for (char **token_i = &tokens[1], *name; (name = *token_i); ++token_i) {
-            unsetenv(name);
-            if (errno) {
-                print_err("unsetenv");
-                exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
-                // Fail fast.
-                break;
-            }
-        }
-    } else {
-        return false;
-    }
-    return true;
-}
-
 void close_fds(intarr_t *fds) {
     for (size_t i = 0; i < fds->len; ++i) {
         // Debug
@@ -184,7 +103,7 @@ void close_fds(intarr_t *fds) {
     }
 }
 
-void exec_sys(char **tokens, void **fdmaps, intarr_t *fds_to_close, bool wait) {
+void exec_fork(void **fdmaps, intarr_t *fds_to_close, bool wait, exec_func_t exec_func, char **argv) {
 
     // Fork
     pid_t cpid = fork();
@@ -195,6 +114,19 @@ void exec_sys(char **tokens, void **fdmaps, intarr_t *fds_to_close, bool wait) {
     }
     if (!cpid) {
         // Child process
+#ifdef QUIRK
+        // Set PARENT.
+        char *parent = get_shell();
+        if (errno) {
+            print_err("get_shell");
+        } else {
+            setenv("PARENT", parent, true);
+            if (errno) {
+                print_err("setenv");
+            }
+            free(parent);
+        }
+#endif
         // I/O redirection with dup2, fdmap[0] will be the same as fdmap[1].
         for (void **fdmap_i = fdmaps, *fdmap_; (fdmap_ = *fdmap_i); ++fdmap_i) {
             int *fdmap = (int *)fdmap_;
@@ -207,11 +139,7 @@ void exec_sys(char **tokens, void **fdmaps, intarr_t *fds_to_close, bool wait) {
             }
         }
         // exec
-        execvp(tokens[0], tokens);
-        if (errno) {
-            print_err(tokens[0]);
-            exit(ZHSH_EXIT_INTERNAL_FAILURE);
-        }
+        exec_func(argv);
     }
 
     // Close file descriptors before we wait.
@@ -246,6 +174,131 @@ void exec_sys(char **tokens, void **fdmaps, intarr_t *fds_to_close, bool wait) {
         int signal = WSTOPSIG(status);
         fprintf(stderr, "Stopped by signal %d\n", signal);
     }
+}
+
+void exec_sys_func(char **argv) {
+    // execvp
+    execvp(argv[0], argv);
+    if (errno) {
+        print_err(argv[0]);
+        exit(ZHSH_EXIT_INTERNAL_FAILURE);
+    }
+}
+
+void exec_sys(char **argv, void **fdmaps, intarr_t *fds_to_close, bool wait) {
+    exec_fork(fdmaps, fds_to_close, wait, exec_sys_func, argv);
+}
+
+#ifndef QUIRK
+static const char *BUILTINS[] = {
+        "cd",
+        "exit",
+        "export",
+        "logout",
+        "unset",
+        NULL
+};
+#endif
+
+bool is_builtin(char *cmd) {
+    for (const char **builtin_i = BUILTINS, *builtin; (builtin = *builtin_i); ++builtin_i) {
+        if (strcmp(cmd, builtin) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+void exec_builtin(char **argv, void **fdmaps, intarr_t *fds_to_close, bool wait) {
+    if (strcmp(argv[0], "cd") == 0) {
+        // cd.
+        // Try to cd to $HOME when no argument is given.
+        char *dir = argv[1] ? argv[1] : getenv("HOME");
+        if (!dir) {
+            print_err_msg("cd", "HOME not set");
+            exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
+        } else {
+            chdir(dir);
+            if (errno) {
+                print_err("chdir");
+                exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
+            } else {
+                // Set OLDPWD.
+                char *old_pwd = getenv("PWD");
+                setenv("OLDPWD", old_pwd, true);
+                if (errno) {
+                    print_err("getenv");
+                    exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
+                    // But we still want to set PWD correctly.
+                }
+                // Set PWD.
+                setenv("PWD", dir, true);
+                if (errno) {
+                    print_err("setenv");
+                    exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
+                }
+            }
+        }
+    } else if (strcmp(argv[0], "exit") == 0) {
+        // exit.
+        exit(EXIT_SUCCESS);
+    } else if (strcmp(argv[0], "export") == 0) {
+        // export.
+        // Iterate through each name-value pair.
+        for (char **token_i = &argv[1], *pair; (pair = *token_i); ++token_i) {
+            // name=value is delimited by the first =, and no space is allowed around it, so it is within this token.
+            char *delimiter = strchr(pair, '=');
+            if (!delimiter) {
+                // If = is not found, simply ignore the "pair".
+                continue;
+            }
+            char *name = strndup(pair, delimiter - pair);
+            char *value = delimiter + 1;
+            // Don't use putenv(); it removes the environment variable if no = is found, contrary to common behavior of
+            // export. And setenv() is required in POSIX while putenv() is not.
+            // See also http://stackoverflow.com/questions/5873029/questions-about-putenv-and-setenv .
+            // setenv() also makes copy of name and value passed in, contrary to putenv().
+            setenv(name, value, true);
+            free(name);
+            if (errno) {
+                print_err("setenv");
+                exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
+                // Fail fast.
+                break;
+            }
+        }
+    } else if (strcmp(argv[0], "logout") == 0) {
+        // logout
+        if (is_login_shell) {
+            exit(EXIT_SUCCESS);
+        } else {
+            print_err_msg("logout", "not login shell: use `exit'");
+            exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
+        }
+    } else if (strcmp(argv[0], "unset") == 0) {
+        // unset.
+        // Iterate through each name-value pair.
+        for (char **token_i = &argv[1], *name; (name = *token_i); ++token_i) {
+            unsetenv(name);
+            if (errno) {
+                print_err("unsetenv");
+                exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
+                // Fail fast.
+                break;
+            }
+        }
+    } else {
+#ifdef QUIRK
+        exec_builtin_quirk(argv, fdmaps, fds_to_close, wait);
+        return;
+#else
+        print_err_msg(argv[0], "no matching builtin found");
+        exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+#endif
+    }
+
+    // Close file descriptors for those without exec_fork (otherwise they should call return above).
+    close_fds(fds_to_close);
 }
 
 typedef struct {
@@ -376,7 +429,9 @@ void exec_cmd(cmd_t *cmd, pipe_redir_t pipe_redir, intarr_t *fds_to_close, bool 
     // Execute command.
     // Default exit status to EXIT_SUCCESS.
     exit_status = EXIT_SUCCESS;
-    if (!exec_builtin(cmd->args)) {
+    if (is_builtin(cmd->args[0])) {
+        exec_builtin(cmd->args, fdmaps, fds_to_close, wait);
+    } else {
         exec_sys(cmd->args, fdmaps, fds_to_close, wait);
     }
 
@@ -452,11 +507,6 @@ void exec_line(char *line) {
         exec_cmd(cmd, pipe_redir, &fds_to_close, wait);
 
         intarr_fin(&fds_to_close);
-
-        if (errno) {
-            // Error occurred and printed in exec_cmd, simply break out this loop and we will return.
-            break;
-        }
         if (exit_status == EXIT_SUCCESS) {
             if (stop_on_success) {
                 break;

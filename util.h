@@ -141,7 +141,7 @@ void ptrarr_free(void **ptrarr, free_ptr_func_t free_ptr_func);
 #define ZHSH_NAME "zhsh"
 
 /**
- * Print error message with perror(), prepended with {@link ZHSH_NAME}.
+ * Print error message with perror(), prepended with {@link ZHSH_NAME}. This also resets errno to 0.
  *
  * @param name Name to be prepended before the error message, used by perror().
  */

@@ -130,6 +130,7 @@ void print_err(char *name) {
     fflush(stdout);
     fprintf(stderr, "%s: ", ZHSH_NAME);
     perror(name);
+    errno = 0;
 }
 
 void print_err_msg(char *name, char *msg) {
