@@ -7,6 +7,7 @@
 #define ZHSH_UTIL_H
 
 #include <stddef.h>
+#include <stdio.h>
 
 /**
  * Reallocate memory.
@@ -154,6 +155,15 @@ void print_err(char *name);
  * @param msg Error message to be printed.
  */
 void print_err_msg(char *name, char *msg);
+
+/**
+ * Get one line from a file.
+ *
+ * @param file File.
+ *
+ * @return One line from the file, or NULL if end is met.
+ */
+char *file_get_line(FILE *file);
 
 /**
  * readlink() with malloc().

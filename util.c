@@ -138,6 +138,23 @@ void print_err_msg(char *name, char *msg) {
     fprintf(stderr, "%s: %s: %s\n", ZHSH_NAME, name, msg);
 }
 
+char *file_get_line(FILE *file) {
+    char *line = NULL;
+    size_t buf_len = 0;
+    ssize_t len = getline(&line, &buf_len, file);
+    if (errno || len == -1) {
+        // Should free line even if getline() failed, according to manual.
+        free(line);
+        return NULL;
+    }
+    // Strip trailing newline.
+    --len;
+    if (line[len] == '\n') {
+        line[len] = '\0';
+    }
+    return line;
+}
+
 char *readlink_malloc(const char *path) {
 
     size_t size = 128;

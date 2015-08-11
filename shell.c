@@ -1,7 +1,6 @@
 #include "shell.h"
 
 #include <errno.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -24,7 +23,7 @@
 
 static bool is_login_shell;
 
-int exit_status;
+int exit_status = EXIT_SUCCESS;
 
 char *get_shell() {
     return readlink_malloc("/proc/self/exe");
@@ -166,9 +165,9 @@ void exec_fork(void **fdmaps, intarr_t *fds_to_close, bool wait, exec_func_t exe
     if (WIFSIGNALED(status)) {
         int signal = WTERMSIG(status);
         if (WCOREDUMP(status)) {
-            fprintf(stderr, "Core dumped by signal %d", signal);
+            fprintf(stderr, "Core dumped by signal %d\n", signal);
         } else {
-            fprintf(stderr, "Killed by signal %d", signal);
+            fprintf(stderr, "Killed by signal %d\n", signal);
         }
     } else if (WIFSTOPPED(status)) {
         int signal = WSTOPSIG(status);
@@ -524,6 +523,10 @@ void exec_line(char *line) {
     cmd_list_free(cmd_list);
 }
 
+bool is_line_empty(char *line) {
+    return strspn(line, " \t\v\f") == strlen(line);
+}
+
 void rep() {
     char *prompt = get_prompt_and_set_title();
     char *line = readline(prompt);
@@ -535,19 +538,53 @@ void rep() {
         exit(EXIT_SUCCESS);
     }
     // No-op if the line is empty.
-    if (strspn(line, " \t\v\f") != strlen(line)) {
+    if (!is_line_empty(line)) {
         exec_line(line);
         add_history(line);
     }
     free(line);
-    errno = 0;
+}
+
+void eval_file(char *path) {
+    FILE *file = fopen(path, "r");
+    if (errno) {
+        print_err("fopen");
+        exit(ZHSH_EXIT_INTERNAL_FAILURE);
+    }
+    char *line;
+    while ((line = file_get_line(file))) {
+        if (!is_line_empty(line)) {
+            exec_line(line);
+        }
+        free(line);
+    }
+    if (errno) {
+        print_err("file_get_line");
+        exit(ZHSH_EXIT_INTERNAL_FAILURE);
+    }
+    fclose(file);
+    if (errno) {
+        print_err("flcose");
+        exit(ZHSH_EXIT_INTERNAL_FAILURE);
+    }
+    exit(exit_status);
 }
 
 int main(int argc, char **argv) {
+
     init(argc, argv);
-    while (true) {
-        rep();
+
+    if (argc == 1) {
+        while (true) {
+            rep();
+        }
+    } else if (argc == 2) {
+        eval_file(argv[1]);
+    } else {
+        fprintf(stderr, "Usage: zhsh [file]\n");
+        exit(ZHSH_EXIT_INTERNAL_FAILURE);
     }
+
     // Never gets here.
     return EXIT_FAILURE;
 }

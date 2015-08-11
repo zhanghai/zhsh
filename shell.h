@@ -14,9 +14,10 @@
 
 extern int exit_status;
 
-#define ZHSH_EXIT_INTERNAL_FAILURE -1
-#define ZHSH_EXIT_PARSER_FAILURE -2
-#define ZHSH_EXIT_BUILTIN_FAILURE -3
+// The same as normal EXIT_FAILURE.
+#define ZHSH_EXIT_INTERNAL_FAILURE 1
+#define ZHSH_EXIT_PARSER_FAILURE 2
+#define ZHSH_EXIT_BUILTIN_FAILURE 3
 
 void close_fds(intarr_t *fds);
 
