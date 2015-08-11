@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+#include <readline/history.h>
 #include <readline/readline.h>
 
 #include "line_parser.h"
@@ -291,11 +292,6 @@ void exec_cmd(cmd_t *cmd, pipe_redir_t pipe_redir, intarr_t *fds_to_close, bool 
 
 void exec_line(char *line) {
 
-    // No-op if the line is empty.
-    if (strspn(line, " \t\v\f") == strlen(line)) {
-        return;
-    }
-
     // Parse the line.
     cmd_list_t *cmd_list = parse_line(line);
     if (errno) {
@@ -380,7 +376,6 @@ void exec_line(char *line) {
 
         pipe_redir_next_stdin = do_pipe_redir;
         pipe_redir_next_stdin_fd = pipe_fds[0];
-        // FIXME: Should close used pipe file descriptor.
     }
 
     cmd_list_free(cmd_list);
@@ -394,7 +389,11 @@ void rep() {
         fprintf(stderr, "exit\n");
         exit(EXIT_SUCCESS);
     }
-    exec_line(line);
+    // No-op if the line is empty.
+    if (strspn(line, " \t\v\f") != strlen(line)) {
+        exec_line(line);
+        add_history(line);
+    }
     free(line);
 }
 
