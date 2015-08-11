@@ -51,8 +51,7 @@
 redirection(REDIR) ::= REDIRECT_INPUT_FROM_FILE(RIFF) ARGUMENT(ARG) . {
     BREAK_IF_ERRNO
     REDIR = redir_alloc();
-    // FIXME: Should add a test on errno here for ENOMEM.
-    // errno is set, so on error this will be freed.
+    BREAK_IF_ERRNO
     REDIR->left_fd = redir_parse_left_fd(RIFF, 1, STDIN_FILENO);
     REDIR->type = REDIRECT_INPUT_FROM_FILE;
     REDIR->right_file = ARG;
@@ -60,6 +59,7 @@ redirection(REDIR) ::= REDIRECT_INPUT_FROM_FILE(RIFF) ARGUMENT(ARG) . {
 redirection(REDIR) ::= REDIRECT_INPUT_FROM_FILE_DESCRIPTOR(RIFFD) ARGUMENT(ARG) . {
     BREAK_IF_ERRNO
     REDIR = redir_alloc();
+    BREAK_IF_ERRNO
     REDIR->left_fd = redir_parse_left_fd(RIFFD, 2, STDIN_FILENO);
     REDIR->type = REDIRECT_INPUT_FROM_FILE_DESCRIPTOR;
     REDIR->right_fd = redir_parse_fd(ARG);
@@ -68,6 +68,7 @@ redirection(REDIR) ::= REDIRECT_INPUT_FROM_FILE_DESCRIPTOR(RIFFD) ARGUMENT(ARG) 
 redirection(REDIR) ::= REDIRECT_OUTPUT_TO_FILE(ROTF) ARGUMENT(ARG) . {
     BREAK_IF_ERRNO
     REDIR = redir_alloc();
+    BREAK_IF_ERRNO
     REDIR->left_fd = redir_parse_left_fd(ROTF, 1, STDOUT_FILENO);
     REDIR->type = REDIRECT_OUTPUT_TO_FILE;
     REDIR->right_file = ARG;
@@ -75,6 +76,7 @@ redirection(REDIR) ::= REDIRECT_OUTPUT_TO_FILE(ROTF) ARGUMENT(ARG) . {
 redirection(REDIR) ::= REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR(ROTFD) ARGUMENT(ARG) . {
     BREAK_IF_ERRNO
     REDIR = redir_alloc();
+    BREAK_IF_ERRNO
     REDIR->left_fd = redir_parse_left_fd(ROTFD, 2, STDOUT_FILENO);
     REDIR->type = REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR;
     REDIR->right_fd = redir_parse_fd(ARG);
@@ -83,6 +85,7 @@ redirection(REDIR) ::= REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR(ROTFD) ARGUMENT(ARG) .
 redirection(REDIR) ::= REDIRECT_OUTPUT_APPEND_TO_FILE(ROATF) ARGUMENT(ARG) . {
     BREAK_IF_ERRNO
     REDIR = redir_alloc();
+    BREAK_IF_ERRNO
     REDIR->left_fd = redir_parse_left_fd(ROATF, 2, STDOUT_FILENO);
     REDIR->type = REDIRECT_OUTPUT_APPEND_TO_FILE;
     REDIR->right_file = ARG;
@@ -90,6 +93,7 @@ redirection(REDIR) ::= REDIRECT_OUTPUT_APPEND_TO_FILE(ROATF) ARGUMENT(ARG) . {
 redirection(REDIR) ::= REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR(ROATFD) ARGUMENT(ARG) . {
     BREAK_IF_ERRNO
     REDIR = redir_alloc();
+    BREAK_IF_ERRNO
     REDIR->left_fd = redir_parse_left_fd(ROATFD, 3, STDOUT_FILENO);
     REDIR->type = REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR;
     REDIR->right_fd = redir_parse_fd(ARG);
@@ -99,11 +103,13 @@ redirection(REDIR) ::= REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR(ROATFD) ARGUMEN
 command(CMD) ::= ARGUMENT(ARG) . {
     BREAK_IF_ERRNO
     CMD = cmd_alloc();
+    BREAK_IF_ERRNO
     strarr_append(&(CMD->args), ARG);
 }
 command(CMD) ::= redirection(REDIR) . {
     BREAK_IF_ERRNO
     CMD = cmd_alloc();
+    BREAK_IF_ERRNO
     ptrarr_append(&(CMD->redirs), REDIR);
 }
 command(CMD) ::= command(CMD_) ARGUMENT(ARG) . {
@@ -120,6 +126,7 @@ command(CMD) ::= command(CMD_) redirection(REDIR) . {
 commandList(CMD_LIST) ::= command(CMD) . {
     BREAK_IF_ERRNO
     CMD_LIST = cmd_list_alloc();
+    BREAK_IF_ERRNO
     ptrarr_append(&(CMD_LIST->cmds), CMD);
 }
 commandList(CMD_LIST) ::= commandList(CMD_LIST_) PIPE command(CMD) . {
