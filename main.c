@@ -38,6 +38,12 @@ bool exec_builtin(char **tokens) {
             if (errno) {
                 print_err("chdir");
                 exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
+            } else {
+                setenv("PWD", dir, true);
+                if (errno) {
+                    print_err("setenv");
+                    exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
+                }
             }
         }
     } else if (strcmp(tokens[0], "export") == 0) {
@@ -55,6 +61,7 @@ bool exec_builtin(char **tokens) {
             // Don't use putenv(); it removes the environment variable if no = is found, contrary to common behavior of
             // export. And setenv() is required in POSIX while putenv() is not.
             // See also http://stackoverflow.com/questions/5873029/questions-about-putenv-and-setenv .
+            // setenv() also makes copy of name and value passed in, contrary to putenv().
             setenv(name, value, true);
             free(name);
             if (errno) {
