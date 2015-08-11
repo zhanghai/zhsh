@@ -29,8 +29,8 @@ cmd_list_t *parse_line(const char *line) {
     int lex_code;
     do {
         lex_code = yylex(scanner);
-        // Token will be freed by %token_destructor in Lemon.
-        char *lex_text = strdup(yyget_text(scanner));
+        // Token will be freed by %token_destructor in Lemon, except the last empty string, so we don't strdup() it.
+        char *lex_text = lex_code != 0 ? strdup(yyget_text(scanner)) : NULL;
         // Debug
         //fprintf(stderr, "Lexer: code %d, text \"%s\"\n", lex_code, lex_text);
         if (errno) {

@@ -288,6 +288,8 @@ void exec_cmd(cmd_t *cmd, pipe_redir_t pipe_redir, intarr_t *fds_to_close, bool 
     if (!exec_builtin(cmd->args)) {
         exec_sys(cmd->args, fdmaps, fds_to_close, wait);
     }
+
+    ptrarr_free(fdmaps, free);
 }
 
 void exec_line(char *line) {
