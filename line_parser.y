@@ -90,15 +90,6 @@ redirection(REDIR) ::= REDIRECT_OUTPUT_APPEND_TO_FILE(ROATF) ARGUMENT(ARG) . {
     REDIR->type = REDIRECT_OUTPUT_APPEND_TO_FILE;
     REDIR->right_file = ARG;
 }
-redirection(REDIR) ::= REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR(ROATFD) ARGUMENT(ARG) . {
-    BREAK_IF_ERRNO
-    REDIR = redir_alloc();
-    BREAK_IF_ERRNO
-    REDIR->left_fd = redir_parse_left_fd(ROATFD, 3, STDOUT_FILENO);
-    REDIR->type = REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR;
-    REDIR->right_fd = redir_parse_fd(ARG);
-    free(ARG);
-}
 
 command(CMD) ::= ARGUMENT(ARG) . {
     BREAK_IF_ERRNO

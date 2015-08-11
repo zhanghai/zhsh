@@ -48,7 +48,6 @@
 [0-9]*">" { finish_last_token_or_return(ARGUMENT, 1, REDIRECT_OUTPUT_TO_FILE); }
 [0-9]*">&" { finish_last_token_or_return(ARGUMENT, 2, REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR); }
 [0-9]*">>" { finish_last_token_or_return(ARGUMENT, 2, REDIRECT_OUTPUT_APPEND_TO_FILE); }
-[0-9]*">>&" { finish_last_token_or_return(ARGUMENT, 3, REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR); }
 "|" { finish_last_token_or_return(ARGUMENT, 1, PIPE); }
 "&" { finish_last_token_or_return(ARGUMENT, 1, BACKGROUND); }
 "||" { finish_last_token_or_return(ARGUMENT, 2, OR); }

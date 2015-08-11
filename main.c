@@ -16,13 +16,18 @@
 #include "parser.h"
 #include "util.h"
 
+static bool is_login_shell;
+
 static int exit_status;
 
 #define ZHSH_EXIT_INTERNAL_FAILURE -1
 #define ZHSH_EXIT_PARSER_FAILURE -2
 #define ZHSH_EXIT_BUILTIN_FAILURE -3
 
-void init() {
+void init(int argc, char **argv) {
+
+    is_login_shell = argv[0][0] == '-';
+
     // Set SHELL.
     char *shell = readlink_malloc("/proc/self/exe");
     if (errno) {
@@ -350,9 +355,6 @@ void exec_cmd(cmd_t *cmd, pipe_redir_t pipe_redir, intarr_t *fds_to_close, bool 
                 }
                 intarr_append(fds_to_close, fdmap[1]);
                 break;
-            case REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR:
-                fdmap[1] = redir->right_fd;
-                break;
             default:
                 errno = EINVAL;
                 print_err("redir->type");
@@ -478,7 +480,8 @@ void rep() {
     free(prompt);
     if (!line) {
         // EOF encountered with empty line, exit this shell.
-        fprintf(stderr, "exit\n");
+        fprintf(stderr, is_login_shell ? "logout" : "exit");
+        fprintf(stderr, "\n");
         exit(EXIT_SUCCESS);
     }
     // No-op if the line is empty.
@@ -490,8 +493,8 @@ void rep() {
     errno = 0;
 }
 
-int main(int argc, char *argv[]) {
-    init();
+int main(int argc, char **argv) {
+    init(argc, argv);
     while (true) {
         rep();
     }

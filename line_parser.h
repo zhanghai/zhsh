@@ -4,9 +4,8 @@
 #define REDIRECT_OUTPUT_TO_FILE         4
 #define REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR  5
 #define REDIRECT_OUTPUT_APPEND_TO_FILE  6
-#define REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR  7
-#define PIPE                            8
-#define OR                              9
-#define AND                            10
-#define BACKGROUND                     11
-#define SEMICOLON                      12
+#define PIPE                            7
+#define OR                              8
+#define AND                             9
+#define BACKGROUND                     10
+#define SEMICOLON                      11
