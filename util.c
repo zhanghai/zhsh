@@ -6,8 +6,15 @@
 #include "util.h"
 
 #include <errno.h>
+#include <stdarg.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+#include <pwd.h>
+#include <unistd.h>
+#include <sys/utsname.h>
 
 void *realloc_util(void *ptr, size_t size) {
     void *ptr_tmp = realloc(ptr, size);
@@ -128,4 +135,90 @@ void print_err(char *name) {
 void print_err_msg(char *name, char *msg) {
     fflush(stdout);
     fprintf(stderr, "%s: %s: %s\n", ZHSH_NAME, name, msg);
+}
+
+char *readlink_malloc(const char *path) {
+
+    size_t size = 128;
+    char *buffer = NULL;
+
+    while (true) {
+        buffer = realloc_util(buffer, size);
+        if (errno) {
+            free(buffer);
+            return NULL;
+        }
+        ssize_t num_chars = readlink(path, buffer, size);
+        if (errno) {
+            free(buffer);
+            return NULL;
+        }
+        if (num_chars < size) {
+            return buffer;
+        }
+        size *= 2;
+    }
+}
+
+char *geteuname() {
+    uid_t uid = geteuid();
+    struct passwd *pw = getpwuid(uid);
+    if (errno) {
+        return NULL;
+    }
+    return pw->pw_name;
+}
+
+// From `man 2 gethostname`:
+// The GNU C library  does  not  employ  the  gethostname()  system  call;
+// instead,  it  implements gethostname() as a library function that calls
+// uname(2) and copies up to len bytes from the  returned  nodename  field
+// into  name.
+// This is also the way systemd employed.
+char *gethostname_malloc() {
+    struct utsname u;
+    uname(&u);
+    if (errno) {
+        return NULL;
+    }
+    return strdup(u.nodename);
+}
+
+char *getcwd_malloc() {
+
+    size_t size = 128;
+    char *buffer = NULL;
+
+    while (true) {
+        buffer = realloc_util(buffer, size);
+        if (errno) {
+            free(buffer);
+            return NULL;
+        }
+        getcwd(buffer, size);
+        if (errno) {
+            if (errno == ERANGE) {
+                size *= 2;
+                errno = 0;
+            } else {
+                free(buffer);
+                return NULL;
+            }
+        } else {
+            return buffer;
+        }
+    }
+}
+
+char *sprintf_malloc(const char *format, ...) {
+    va_list vl;
+    va_start(vl, format);
+    va_list vl2;
+    va_copy(vl2, vl);
+    size_t size = (size_t) vsnprintf(NULL, 0, format, vl2) + 1;
+    va_end(vl2);
+    char *buffer = malloc(size);
+    vsnprintf(buffer, size, format, vl);
+    va_end(vl);
+    return buffer;
 }

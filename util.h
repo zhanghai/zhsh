@@ -155,4 +155,43 @@ void print_err(char *name);
  */
 void print_err_msg(char *name, char *msg);
 
+/**
+ * readlink() with malloc().
+ *
+ * @param path Path to the symbolic link.
+ *
+ * @return Content of the symbolic link.
+ */
+char *readlink_malloc(const char *path);
+
+/**
+ * Get the name of effective user.
+ *
+ * @return Name of effective user.
+ */
+char *geteuname();
+
+/**
+ * gethostname() with malloc().
+ *
+ * @return Host name.
+ */
+char *gethostname_malloc();
+
+/**
+ * getcwd() with malloc().
+ *
+ * @return Current working directory.
+ */
+char *getcwd_malloc();
+
+/**
+ * sprintf() with malloc().
+ *
+ * @param format Format.
+ *
+ * @return Printed string.
+ */
+char *sprintf_malloc(const char *format, ...);
+
 #endif //ZHSH_UTIL_H

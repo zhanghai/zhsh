@@ -22,6 +22,72 @@ static int exit_status;
 #define ZHSH_EXIT_PARSER_FAILURE -2
 #define ZHSH_EXIT_BUILTIN_FAILURE -3
 
+void init() {
+    // Set SHELL.
+    char *shell = readlink_malloc("/proc/self/exe");
+    if (errno) {
+        print_err("readlink_malloc");
+    } else {
+        setenv("SHELL", shell, true);
+        if (errno) {
+            print_err("setenv");
+        }
+        free(shell);
+    }
+    errno = 0;
+}
+
+char *get_prompt_and_set_title() {
+
+    // Basic information.
+    char *euname = geteuname();
+    if (errno) {
+        print_err("geteuname");
+        errno = 0;
+    }
+    char *hostname = gethostname_malloc();
+    if (errno) {
+        print_err("gethostname_malloc");
+        errno = 0;
+    }
+    char *cwd = getcwd_malloc();
+    if (errno) {
+        print_err("getcwd_malloc");
+        errno = 0;
+    }
+
+    // Set title.
+    printf("\033]2;%s@%s:%s\007", euname, hostname, cwd);
+
+    // Build prompt.
+// RL_PROMPT_START_IGNORE = '\001', and RL_PROMPT_END_IGNORE = '\002'.
+#define ESC_BOLD_GREEN "\001\033[01;32m\002"
+#define ESC_BOLD_BLUE "\001\033[01;34m\002"
+#define ESC_BOLD_RED "\001\033[01;31m\002"
+#define ESC_RESET "\001\033[00m\002"
+
+    char *exit_status_face = exit_status != EXIT_SUCCESS ? " " ESC_BOLD_RED ":(" ESC_BOLD_BLUE : "";
+
+    char *prompt;
+    if (geteuid() == 0) {
+        prompt = sprintf_malloc(ESC_BOLD_RED "%s" ESC_BOLD_BLUE " %s%s #" ESC_RESET " ", hostname, cwd,
+                                exit_status_face);
+    } else {
+        prompt = sprintf_malloc(ESC_BOLD_GREEN "%s@%s" ESC_BOLD_BLUE " %s%s $" ESC_RESET " ", euname, hostname, cwd,
+                                exit_status_face);
+    }
+
+#undef ESC_BOLD_GREEN
+#undef ESC_BOLD_BLUE
+#undef ESC_BOLD_RED
+#undef ESC_RESET
+
+    free(hostname);
+    free(cwd);
+
+    return prompt;
+}
+
 bool exec_builtin(char **tokens) {
     if (strcmp(tokens[0], "exit") == 0) {
         // exit.
@@ -39,10 +105,26 @@ bool exec_builtin(char **tokens) {
                 print_err("chdir");
                 exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
             } else {
+                char *old_pwd = getenv("PWD");
+                if (errno) {
+                    print_err("getenv");
+                    exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
+                } else {
+                    setenv("OLDPWD", old_pwd, true);
+                    if (errno) {
+                        print_err("getenv");
+                        exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
+                        // But still we want to set PWD correctly.
+                    }
+                }
+                int old_errno = errno;
+                errno = 0;
                 setenv("PWD", dir, true);
                 if (errno) {
                     print_err("setenv");
                     exit_status = ZHSH_EXIT_BUILTIN_FAILURE;
+                } else {
+                    errno = old_errno;
                 }
             }
         }
@@ -391,8 +473,9 @@ void exec_line(char *line) {
 }
 
 void rep() {
-    char *prompt = "zhsh $ ";
+    char *prompt = get_prompt_and_set_title();
     char *line = readline(prompt);
+    free(prompt);
     if (!line) {
         // EOF encountered with empty line, exit this shell.
         fprintf(stderr, "exit\n");
@@ -404,11 +487,12 @@ void rep() {
         add_history(line);
     }
     free(line);
+    errno = 0;
 }
 
 int main(int argc, char *argv[]) {
+    init();
     while (true) {
-        errno = 0;
         rep();
     }
     // Never gets here.
