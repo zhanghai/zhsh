@@ -10,8 +10,6 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "util.h"
-
 redir_t *redir_alloc() {
     redir_t *redir = malloc(sizeof(redir_t));
     if (errno) {
@@ -82,18 +80,8 @@ cmd_list_t *cmd_list_alloc() {
         return NULL;
     }
     cmd_list->cmds = ptrarr_alloc();
-    cmd_list->ops = NULL;
-    cmd_list->op_len = 0;
+    intarr_init(&(cmd_list->ops));
     return cmd_list;
-}
-
-void cmd_list_append_op(cmd_list_t *cmd_list, int op) {
-    cmd_list->ops = realloc(cmd_list->ops, cmd_list->op_len + 1);
-    if (errno) {
-        return;
-    }
-    cmd_list->ops[cmd_list->op_len] = op;
-    ++(cmd_list->op_len);
 }
 
 void cmd_list_free_cmd_func(void *cmd) {
@@ -105,6 +93,6 @@ void cmd_list_free(cmd_list_t *cmd_list) {
         return;
     }
     ptrarr_free(cmd_list->cmds, cmd_list_free_cmd_func);
-    free(cmd_list->ops);
+    intarr_fin(&(cmd_list->ops));
     free(cmd_list);
 }

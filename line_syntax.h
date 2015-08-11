@@ -8,6 +8,8 @@
 
 #include <stddef.h>
 
+#include "util.h"
+
 typedef struct {
     int left_fd;
     int type;
@@ -38,8 +40,7 @@ void cmd_free(cmd_t *cmd);
 
 typedef struct {
     void **cmds;
-    int *ops;
-    size_t op_len;
+    intarr_t ops;
 } cmd_list_t;
 
 cmd_list_t * cmd_list_alloc();

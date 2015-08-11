@@ -9,9 +9,50 @@
 #include <stddef.h>
 
 /**
- * Global name used by {@link print_err} and {@print_err_msg}.
+ * Reallocate memory.
+ *
+ * <p>Note: realloc() returns NULL on failure, however the normal usage is to set the pointer to be reallocated the
+ * return value of realloc() (and check for errno), so we provide and use our own version here.</p>
+ *
+ * @param ptr Pointer.
+ * @param size Size.
+ *
+ * @return Reallocated pointer, or ptr itself on failure.
  */
-#define ZHSH_NAME "zhsh"
+void *realloc_util(void *ptr, size_t size);
+
+typedef struct {
+    int *arr;
+    size_t len;
+} intarr_t;
+
+/**
+ * Initialize an int array.
+ *
+ * @param Uninitialized int array.
+ */
+void intarr_init(intarr_t *intarr);
+
+/**
+ * Reallocate an int array.
+ *
+ * @param intarr Int array.
+ * @param len New length.
+ */
+void intarr_realloc(intarr_t *intarr, size_t len);
+
+/**
+ * Append an int to an int array.
+ *
+ * @param intarr Int array.
+ * @param i Int.
+ */
+void intarr_append(intarr_t *intarr, int i);
+
+/**
+ * Finalize an int array.
+ */
+void intarr_fin(intarr_t *intarr);
 
 /**
  * Allocate a NULL-terminated string array.
@@ -95,7 +136,12 @@ typedef void (*free_ptr_func_t)(void *ptr);
 void ptrarr_free(void **ptrarr, free_ptr_func_t free_ptr_func);
 
 /**
- * Print error message with perror(), prepended with {@link ZHSH_NAME}. Also resets errno to zero after perror().
+ * Global name used by {@link print_err} and {@print_err_msg}.
+ */
+#define ZHSH_NAME "zhsh"
+
+/**
+ * Print error message with perror(), prepended with {@link ZHSH_NAME}.
  *
  * @param name Name to be prepended before the error message, used by perror().
  */

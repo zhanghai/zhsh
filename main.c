@@ -21,8 +21,6 @@ static int exit_status;
 #define ZHSH_EXIT_PARSER_FAILURE -2
 #define ZHSH_EXIT_BUILTIN_FAILURE -3
 
-// FIXME: errno resume.
-
 bool exec_builtin(char **tokens) {
     if (strcmp(tokens[0], "exit") == 0) {
         // exit.
@@ -83,9 +81,17 @@ bool exec_builtin(char **tokens) {
     return true;
 }
 
-void exec_sys(char **tokens, void **fdmaps, bool wait) {
+void close_fds(intarr_t *fds) {
+    for (size_t i = 0; i < fds->len; ++i) {
+        // Debug
+        //fprintf(stderr, "close(%d)\n", fds->arr[i]);
+        close(fds->arr[i]);
+    }
+}
 
-    // fork
+void exec_sys(char **tokens, void **fdmaps, intarr_t *fds_to_close, bool wait) {
+
+    // Fork
     pid_t cpid = fork();
     if (errno) {
         print_err("fork");
@@ -98,6 +104,8 @@ void exec_sys(char **tokens, void **fdmaps, bool wait) {
         for (void **fdmap_i = fdmaps, *fdmap_; (fdmap_ = *fdmap_i); ++fdmap_i) {
             int *fdmap = (int *)fdmap_;
             dup2(fdmap[1], fdmap[0]);
+            // Debug
+            //fprintf(stderr, "dup2(%d, %d)\n", fdmap[1], fdmap[0]);
             if (errno) {
                 print_err("dup2");
                 exit(ZHSH_EXIT_INTERNAL_FAILURE);
@@ -111,7 +119,16 @@ void exec_sys(char **tokens, void **fdmaps, bool wait) {
         }
     }
 
+    // Close file descriptors before we wait.
+    close_fds(fds_to_close);
+    if (errno) {
+        print_err("close_fds");
+        exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+        return;
+    }
+
     if (!wait) {
+        // FIXME: Should kill zombies.
         return;
     }
     // Wait for child process and set exit status.
@@ -136,15 +153,67 @@ void exec_sys(char **tokens, void **fdmaps, bool wait) {
     }
 }
 
-void exec_cmd(cmd_t *cmd, bool wait) {
+typedef struct {
+    bool redir_stdin;
+    int redir_stdin_fd;
+    bool redir_stdout;
+    int redir_stdout_fd;
+} pipe_redir_t;
 
-    // Build file descriptor map from redir_t.
+void exec_cmd(cmd_t *cmd, pipe_redir_t pipe_redir, intarr_t *fds_to_close, bool wait) {
+
+    // Build file descriptor map from pipe_redir_t and redir_t.
     void **fdmaps = ptrarr_alloc();
     if (errno) {
         print_err("ptrarr_alloc");
         exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+        close_fds(fds_to_close);
         return;
     }
+    // pipe_redir_t
+    if (pipe_redir.redir_stdin) {
+        // fdmap[0] will be the same as fdmap[1]
+        int *fdmap = malloc(2 * sizeof(int));
+        if (errno) {
+            print_err("malloc");
+            exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+            close_fds(fds_to_close);
+            ptrarr_free(fdmaps, free);
+            return;
+        }
+        fdmap[0] = STDIN_FILENO;
+        fdmap[1] = pipe_redir.redir_stdin_fd;
+        ptrarr_append(&fdmaps, fdmap);
+        if (errno) {
+            print_err("ptrarr_append");
+            exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+            close_fds(fds_to_close);
+            ptrarr_free(fdmaps, free);
+            return;
+        }
+    }
+    if (pipe_redir.redir_stdout) {
+        // fdmap[0] will be the same as fdmap[1]
+        int *fdmap = malloc(2 * sizeof(int));
+        if (errno) {
+            print_err("malloc");
+            exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+            close_fds(fds_to_close);
+            ptrarr_free(fdmaps, free);
+            return;
+        }
+        fdmap[0] = STDOUT_FILENO;
+        fdmap[1] = pipe_redir.redir_stdout_fd;
+        ptrarr_append(&fdmaps, fdmap);
+        if (errno) {
+            print_err("ptrarr_append");
+            exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+            close_fds(fds_to_close);
+            ptrarr_free(fdmaps, free);
+            return;
+        }
+    }
+    // redir_t
     for (void **redir_i = cmd->redirs, *redir_; (redir_ = *redir_i); ++redir_i) {
         redir_t *redir = (redir_t *) redir_;
         // fdmap[0] will be the same as fdmap[1]
@@ -157,10 +226,11 @@ void exec_cmd(cmd_t *cmd, bool wait) {
                 if (errno) {
                     print_err("open");
                     exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
-                    // FIXME: Should free fds opened by this operation.
+                    close_fds(fds_to_close);
                     ptrarr_free(fdmaps, free);
                     return;
                 }
+                intarr_append(fds_to_close, fdmap[1]);
                 break;
             case REDIRECT_INPUT_FROM_FILE_DESCRIPTOR:
                 fdmap[1] = redir->right_fd;
@@ -170,9 +240,11 @@ void exec_cmd(cmd_t *cmd, bool wait) {
                 if (errno) {
                     print_err("open");
                     exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+                    close_fds(fds_to_close);
                     ptrarr_free(fdmaps, free);
                     return;
                 }
+                intarr_append(fds_to_close, fdmap[1]);
                 break;
             case REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR:
                 fdmap[1] = redir->right_fd;
@@ -182,9 +254,11 @@ void exec_cmd(cmd_t *cmd, bool wait) {
                 if (errno) {
                     print_err("open");
                     exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+                    close_fds(fds_to_close);
                     ptrarr_free(fdmaps, free);
                     return;
                 }
+                intarr_append(fds_to_close, fdmap[1]);
                 break;
             case REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR:
                 fdmap[1] = redir->right_fd;
@@ -193,25 +267,34 @@ void exec_cmd(cmd_t *cmd, bool wait) {
                 errno = EINVAL;
                 print_err("redir->type");
                 exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+                close_fds(fds_to_close);
                 ptrarr_free(fdmaps, free);
                 return;
         }
         ptrarr_append(&fdmaps, fdmap);
+        if (errno) {
+            print_err("ptrarr_append");
+            exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+            close_fds(fds_to_close);
+            ptrarr_free(fdmaps, free);
+            return;
+        }
     }
 
     // Execute command.
     // Default exit status to EXIT_SUCCESS.
     exit_status = EXIT_SUCCESS;
     if (!exec_builtin(cmd->args)) {
-        exec_sys(cmd->args, fdmaps, wait);
+        exec_sys(cmd->args, fdmaps, fds_to_close, wait);
     }
-    // FIXME: Should close the fds opened by this function.
 }
 
 void exec_line(char *line) {
 
     // No-op if the line is empty.
-    // TODO.
+    if (strspn(line, " \t\v\f") == strlen(line)) {
+        return;
+    }
 
     // Parse the line.
     cmd_list_t *cmd_list = parse_line(line);
@@ -222,6 +305,8 @@ void exec_line(char *line) {
     }
 
     // Execute the line.
+    bool pipe_redir_next_stdin = false;
+    int pipe_redir_next_stdin_fd = -1;
     for (size_t i = 0; ; ++i) {
 
         cmd_t *cmd = cmd_list->cmds[i];
@@ -229,29 +314,73 @@ void exec_line(char *line) {
             break;
         }
         int op = -1;
-        if (i < cmd_list->op_len) {
-            op = cmd_list->ops[i];
+        if (i < cmd_list->ops.len) {
+            op = cmd_list->ops.arr[i];
         }
 
-        // TODO: Pipe.
-        //bool pipe = op == PIPE;
-        bool wait = op != BACKGROUND;
-        bool break_on_success = op == OR;
-        bool break_on_failure = op == AND;
+        // Handle operator.
+        bool do_pipe_redir = op == PIPE;
+        bool wait = op != BACKGROUND && !do_pipe_redir;
+        bool stop_on_success = op == OR;
+        bool stop_on_failure = op == AND;
 
-        exec_cmd(cmd, wait);
+        // Handle piping.
+        int pipe_fds[2] = {-1, -1};
+        if (do_pipe_redir) {
+            pipe(pipe_fds);
+            if (errno) {
+                print_err("pipe");
+                exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+                break;
+            }
+            // Debug
+            //fprintf(stderr, "pipe(%d, %d)\n", pipe_fds[0], pipe_fds[1]);
+            fcntl(pipe_fds[0], F_SETFD, FD_CLOEXEC);
+            if (errno) {
+                print_err("fcntl");
+                exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+                break;
+            }
+            fcntl(pipe_fds[1], F_SETFD, FD_CLOEXEC);
+            if (errno) {
+                print_err("fcntl");
+                exit_status = ZHSH_EXIT_INTERNAL_FAILURE;
+                break;
+            }
+        }
+        pipe_redir_t pipe_redir = {pipe_redir_next_stdin, pipe_redir_next_stdin_fd, do_pipe_redir, pipe_fds[1]};
+
+        // Init fds_to_close.
+        intarr_t fds_to_close;
+        intarr_init(&fds_to_close);
+        if (pipe_redir.redir_stdin) {
+            intarr_append(&fds_to_close, pipe_redir.redir_stdin_fd);
+        }
+        if (pipe_redir.redir_stdout) {
+            intarr_append(&fds_to_close, pipe_redir.redir_stdout_fd);
+        }
+
+        exec_cmd(cmd, pipe_redir, &fds_to_close, wait);
+
+        intarr_fin(&fds_to_close);
+
         if (errno) {
-            // TODO
+            // Error occurred and printed in exec_cmd, simply break out this loop and we will return.
+            break;
         }
         if (exit_status == EXIT_SUCCESS) {
-            if (break_on_success) {
+            if (stop_on_success) {
                 break;
             }
         } else {
-            if (break_on_failure) {
+            if (stop_on_failure) {
                 break;
             }
         }
+
+        pipe_redir_next_stdin = do_pipe_redir;
+        pipe_redir_next_stdin_fd = pipe_fds[0];
+        // FIXME: Should close used pipe file descriptor.
     }
 
     cmd_list_free(cmd_list);

@@ -7,6 +7,8 @@
     #include <stdlib.h>
     #include <string.h>
 
+    #include <unistd.h>
+
     #include "line_syntax.h"
     #include "util.h"
 
@@ -51,14 +53,14 @@ redirection(REDIR) ::= REDIRECT_INPUT_FROM_FILE(RIFF) ARGUMENT(ARG) . {
     REDIR = redir_alloc();
     // FIXME: Should add a test on errno here for ENOMEM.
     // errno is set, so on error this will be freed.
-    REDIR->left_fd = redir_parse_left_fd(RIFF, 1, 0);
+    REDIR->left_fd = redir_parse_left_fd(RIFF, 1, STDIN_FILENO);
     REDIR->type = REDIRECT_INPUT_FROM_FILE;
     REDIR->right_file = ARG;
 }
 redirection(REDIR) ::= REDIRECT_INPUT_FROM_FILE_DESCRIPTOR(RIFFD) ARGUMENT(ARG) . {
     BREAK_IF_ERRNO
     REDIR = redir_alloc();
-    REDIR->left_fd = redir_parse_left_fd(RIFFD, 2, 0);
+    REDIR->left_fd = redir_parse_left_fd(RIFFD, 2, STDIN_FILENO);
     REDIR->type = REDIRECT_INPUT_FROM_FILE_DESCRIPTOR;
     REDIR->right_fd = redir_parse_fd(ARG);
     free(ARG);
@@ -66,14 +68,14 @@ redirection(REDIR) ::= REDIRECT_INPUT_FROM_FILE_DESCRIPTOR(RIFFD) ARGUMENT(ARG) 
 redirection(REDIR) ::= REDIRECT_OUTPUT_TO_FILE(ROTF) ARGUMENT(ARG) . {
     BREAK_IF_ERRNO
     REDIR = redir_alloc();
-    REDIR->left_fd = redir_parse_left_fd(ROTF, 1, 1);
+    REDIR->left_fd = redir_parse_left_fd(ROTF, 1, STDOUT_FILENO);
     REDIR->type = REDIRECT_OUTPUT_TO_FILE;
     REDIR->right_file = ARG;
 }
 redirection(REDIR) ::= REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR(ROTFD) ARGUMENT(ARG) . {
     BREAK_IF_ERRNO
     REDIR = redir_alloc();
-    REDIR->left_fd = redir_parse_left_fd(ROTFD, 2, 1);
+    REDIR->left_fd = redir_parse_left_fd(ROTFD, 2, STDOUT_FILENO);
     REDIR->type = REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR;
     REDIR->right_fd = redir_parse_fd(ARG);
     free(ARG);
@@ -81,14 +83,14 @@ redirection(REDIR) ::= REDIRECT_OUTPUT_TO_FILE_DESCRIPTOR(ROTFD) ARGUMENT(ARG) .
 redirection(REDIR) ::= REDIRECT_OUTPUT_APPEND_TO_FILE(ROATF) ARGUMENT(ARG) . {
     BREAK_IF_ERRNO
     REDIR = redir_alloc();
-    REDIR->left_fd = redir_parse_left_fd(ROATF, 2, 1);
+    REDIR->left_fd = redir_parse_left_fd(ROATF, 2, STDOUT_FILENO);
     REDIR->type = REDIRECT_OUTPUT_APPEND_TO_FILE;
     REDIR->right_file = ARG;
 }
 redirection(REDIR) ::= REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR(ROATFD) ARGUMENT(ARG) . {
     BREAK_IF_ERRNO
     REDIR = redir_alloc();
-    REDIR->left_fd = redir_parse_left_fd(ROATFD, 3, 1);
+    REDIR->left_fd = redir_parse_left_fd(ROATFD, 3, STDOUT_FILENO);
     REDIR->type = REDIRECT_OUTPUT_APPEND_TO_FILE_DESCRIPTOR;
     REDIR->right_fd = redir_parse_fd(ARG);
     free(ARG);
@@ -123,42 +125,42 @@ commandList(CMD_LIST) ::= command(CMD) . {
 commandList(CMD_LIST) ::= commandList(CMD_LIST_) PIPE command(CMD) . {
     BREAK_IF_ERRNO
     CMD_LIST = CMD_LIST_;
-    cmd_list_append_op(CMD_LIST, PIPE);
+    intarr_append(&(CMD_LIST->ops), PIPE);
     ptrarr_append(&(CMD_LIST->cmds), CMD);
 }
 commandList(CMD_LIST) ::= commandList(CMD_LIST_) OR command(CMD) . {
     BREAK_IF_ERRNO
     CMD_LIST = CMD_LIST_;
-    cmd_list_append_op(CMD_LIST, OR);
+    intarr_append(&(CMD_LIST->ops), OR);
     ptrarr_append(&(CMD_LIST->cmds), CMD);
 }
 commandList(CMD_LIST) ::= commandList(CMD_LIST_) AND command(CMD) . {
     BREAK_IF_ERRNO
     CMD_LIST = CMD_LIST_;
-    cmd_list_append_op(CMD_LIST, AND);
+    intarr_append(&(CMD_LIST->ops), AND);
     ptrarr_append(&(CMD_LIST->cmds), CMD);
 }
 commandList(CMD_LIST) ::= commandList(CMD_LIST_) BACKGROUND command(CMD). {
     BREAK_IF_ERRNO
     CMD_LIST = CMD_LIST_;
-    cmd_list_append_op(CMD_LIST, BACKGROUND);
+    intarr_append(&(CMD_LIST->ops), BACKGROUND);
     ptrarr_append(&(CMD_LIST->cmds), CMD);
 }
 commandList(CMD_LIST) ::= commandList(CMD_LIST_) BACKGROUND . {
     BREAK_IF_ERRNO
     CMD_LIST = CMD_LIST_;
-    cmd_list_append_op(CMD_LIST, BACKGROUND);
+    intarr_append(&(CMD_LIST->ops), BACKGROUND);
 }
 commandList(CMD_LIST) ::= commandList(CMD_LIST_) SEMICOLON command(CMD). {
     BREAK_IF_ERRNO
     CMD_LIST = CMD_LIST_;
-    cmd_list_append_op(CMD_LIST, SEMICOLON);
+    intarr_append(&(CMD_LIST->ops), SEMICOLON);
     ptrarr_append(&(CMD_LIST->cmds), CMD);
 }
 commandList(CMD_LIST) ::= commandList(CMD_LIST_) SEMICOLON . {
     BREAK_IF_ERRNO
     CMD_LIST = CMD_LIST_;
-    cmd_list_append_op(CMD_LIST, SEMICOLON);
+    intarr_append(&(CMD_LIST->ops), SEMICOLON);
 }
 
 start ::= commandList(CMD_LIST) . {
