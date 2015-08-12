@@ -97,7 +97,8 @@ void init(int argc, char **argv) {
     // Setup children handling.
     pidarr_init(&unwaited_children);
     // This is automatically reset on exec.
-    set_signal_handler(SIGCHLD, sigchld_handler);
+    // FIXME: This causes weird behavior on waitpid().
+    //set_signal_handler(SIGCHLD, sigchld_handler);
 }
 
 char *get_prompt_and_set_title() {
@@ -223,6 +224,10 @@ void exec_fork(void **fdmaps, intarr_t *fds_to_close, bool wait, exec_func_t exe
         return;
     }
     exit_status = WEXITSTATUS(status);
+    if (!(WIFEXITED(status) || WIFSIGNALED(status))) {
+        // Need to wait for its completion.
+        pidarr_append(&unwaited_children, cpid);
+    }
     if (WIFSIGNALED(status)) {
         int signal = WTERMSIG(status);
         if (WCOREDUMP(status)) {
