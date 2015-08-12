@@ -29,6 +29,23 @@ char *get_shell() {
     return readlink_malloc("/proc/self/exe");
 }
 
+void set_signal_handler(int sig, __sighandler_t handler) {
+    struct sigaction sigact;
+    sigact.sa_handler = handler;
+    sigaction(sig, &sigact, NULL);
+    if (errno) {
+        print_err("sigaction");
+    }
+}
+
+void set_terminal_signals_handler(__sighandler_t handler) {
+    set_signal_handler(SIGINT, handler);
+    set_signal_handler(SIGQUIT, handler);
+    set_signal_handler(SIGTSTP, handler);
+    set_signal_handler(SIGTTIN, handler);
+    set_signal_handler(SIGTTOU, handler);
+}
+
 void init(int argc, char **argv) {
 
     is_login_shell = argv[0][0] == '-';
@@ -44,6 +61,9 @@ void init(int argc, char **argv) {
         }
         free(shell);
     }
+
+    // Set signal handling.
+    set_terminal_signals_handler(SIG_IGN);
 }
 
 char *get_prompt_and_set_title() {
@@ -112,7 +132,9 @@ void exec_fork(void **fdmaps, intarr_t *fds_to_close, bool wait, exec_func_t exe
         return;
     }
     if (!cpid) {
+
         // Child process
+
 #ifdef QUIRK
         // Set PARENT.
         char *parent = get_shell();
@@ -126,6 +148,7 @@ void exec_fork(void **fdmaps, intarr_t *fds_to_close, bool wait, exec_func_t exe
             free(parent);
         }
 #endif
+
         // I/O redirection with dup2, fdmap[0] will be the same as fdmap[1].
         for (void **fdmap_i = fdmaps, *fdmap_; (fdmap_ = *fdmap_i); ++fdmap_i) {
             int *fdmap = (int *)fdmap_;
@@ -137,6 +160,10 @@ void exec_fork(void **fdmaps, intarr_t *fds_to_close, bool wait, exec_func_t exe
                 exit(ZHSH_EXIT_INTERNAL_FAILURE);
             }
         }
+
+        // Reset signal behavior
+        set_terminal_signals_handler(SIG_DFL);
+
         // exec
         exec_func(argv);
     }
