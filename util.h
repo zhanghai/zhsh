@@ -9,6 +9,8 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#include <unistd.h>
+
 /**
  * Reallocate memory.
  *
@@ -51,9 +53,58 @@ void intarr_realloc(intarr_t *intarr, size_t len);
 void intarr_append(intarr_t *intarr, int i);
 
 /**
+ * Remove an int from an int array.
+ *
+ * @param intarr Int array.
+ * @param index Index of the int to be removed.
+ */
+void intarr_remove(intarr_t *intarr, size_t index);
+
+/**
  * Finalize an int array.
  */
 void intarr_fin(intarr_t *intarr);
+
+typedef struct {
+    pid_t *arr;
+    size_t len;
+} pidarr_t;
+
+/**
+ * Initialize a pid array.
+ *
+ * @param Uninitialized pid array.
+ */
+void pidarr_init(pidarr_t *pidarr);
+
+/**
+ * Reallocate a pid array.
+ *
+ * @param arr Pid array.
+ * @param len New length.
+ */
+void pidarr_realloc(pidarr_t *pidarr, size_t len);
+
+/**
+ * Append a pid to a pid array.
+ *
+ * @param pidarr Pid array.
+ * @param pid Pid.
+ */
+void pidarr_append(pidarr_t *pidarr, pid_t pid);
+
+/**
+ * Remove a pid from a pid array.
+ *
+ * @param pidarr Pid array.
+ * @param index Index of the pid to be removed.
+ */
+void pidarr_remove(pidarr_t *pidarr, size_t index);
+
+/**
+ * Finalize a pid array.
+ */
+void pidarr_fin(pidarr_t *pidarr);
 
 /**
  * Allocate a NULL-terminated string array.

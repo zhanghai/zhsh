@@ -43,9 +43,50 @@ void intarr_append(intarr_t *intarr, int i) {
     intarr->arr[len] = i;
 }
 
+void intarr_remove(intarr_t *intarr, size_t index) {
+    --(intarr->len);
+    for (; index < intarr->len; ++index) {
+        intarr->arr[index] = intarr->arr[index + 1];
+    }
+}
+
 void intarr_fin(intarr_t *intarr) {
     free(intarr->arr);
     intarr->len = 0;
+}
+
+void pidarr_init(pidarr_t *pidarr) {
+    pidarr->arr = NULL;
+    pidarr->len = 0;
+}
+
+void pidarr_realloc(pidarr_t *pidarr, size_t len) {
+    pidarr->arr = realloc_util(pidarr->arr, len * sizeof((pidarr->arr)[0]));
+    if (errno) {
+        return;
+    }
+    pidarr->len = len;
+}
+
+void pidarr_append(pidarr_t *pidarr, pid_t pid) {
+    size_t len = pidarr->len;
+    pidarr_realloc(pidarr, len + 1);
+    if (errno) {
+        return;
+    }
+    pidarr->arr[len] = pid;
+}
+
+void pidarr_remove(pidarr_t *pidarr, size_t index) {
+    --(pidarr->len);
+    for (; index < pidarr->len; ++index) {
+        pidarr->arr[index] = pidarr->arr[index + 1];
+    }
+}
+
+void pidarr_fin(pidarr_t *pidarr) {
+    free(pidarr->arr);
+    pidarr->len = 0;
 }
 
 char **strarr_alloc() {

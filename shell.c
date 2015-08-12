@@ -19,11 +19,15 @@
 
 #ifdef QUIRK
 #include "quirk/quirk.h"
+#include "util.h"
+
 #endif
 
 static bool is_login_shell;
 
 int exit_status = EXIT_SUCCESS;
+
+static pidarr_t unwaited_children;
 
 char *get_shell() {
     return readlink_malloc("/proc/self/exe");
@@ -32,6 +36,9 @@ char *get_shell() {
 void set_signal_handler(int sig, __sighandler_t handler) {
     struct sigaction sigact;
     sigact.sa_handler = handler;
+    sigemptyset(&sigact.sa_mask);
+    // SA_RESTART is set by default, so when we handle it ourselves we need to set it manually.
+    sigact.sa_flags = SA_RESTART;
     sigaction(sig, &sigact, NULL);
     if (errno) {
         print_err("sigaction");
@@ -45,6 +52,28 @@ void set_terminal_signals_handler(__sighandler_t handler) {
     set_signal_handler(SIGTTIN, handler);
     set_signal_handler(SIGTTOU, handler);
 }
+
+void sigchld_handler(int sig) {
+    // Reap possible zombies.
+    for (size_t i = 0; i < unwaited_children.len; ) {
+        int status;
+        pid_t wpid = waitpid(unwaited_children.arr[i], &status, WNOHANG);
+        if (errno) {
+            print_err("waitpid");
+            continue;
+        }
+        if (wpid == 0) {
+            // No state change on this child, continue.
+            continue;
+        }
+        if (WIFEXITED(status) || WIFSIGNALED(status)) {
+            // Zombie reaped, remove it from the list.
+            pidarr_remove(&unwaited_children, i);
+        } else {
+            ++i;
+        }
+    }
+};
 
 void init(int argc, char **argv) {
 
@@ -62,8 +91,13 @@ void init(int argc, char **argv) {
         free(shell);
     }
 
-    // Set signal handling.
+    // Setup signal handling.
     set_terminal_signals_handler(SIG_IGN);
+
+    // Setup children handling.
+    pidarr_init(&unwaited_children);
+    // This is automatically reset on exec.
+    set_signal_handler(SIGCHLD, sigchld_handler);
 }
 
 char *get_prompt_and_set_title() {
@@ -177,7 +211,7 @@ void exec_fork(void **fdmaps, intarr_t *fds_to_close, bool wait, exec_func_t exe
     }
 
     if (!wait) {
-        // FIXME: Should kill zombies.
+        pidarr_append(&unwaited_children, cpid);
         return;
     }
     // Wait for child process and set exit status.
