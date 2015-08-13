@@ -335,7 +335,7 @@ extern int yylex (yyscan_t yyscanner);
 #undef YY_DECL
 #endif
 
-#line 83 "line_lexer.l"
+#line 88 "line_lexer.l"
 
 
 #line 342 "/home/zh/workspace/github/zhsh/line_lexer.h"
