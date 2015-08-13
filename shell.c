@@ -19,8 +19,6 @@
 
 #ifdef QUIRK
 #include "quirk/quirk.h"
-#include "util.h"
-
 #endif
 
 static bool is_login_shell;
