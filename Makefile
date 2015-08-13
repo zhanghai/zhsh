@@ -45,7 +45,7 @@ shell.o: shell.c shell.h line_syntax.h line_parser.h parser.h quirk/quirk.h
 quirk:
 	$(MAKE) -C quirk
 
-zhsh: util.o line_lexer.o line_syntax.o line_parser.o parser.o quirk/echo.o quirk/env.o quirk/help.o quirk/ls.o quirk/quirk.o shell.o
+zhsh: util.o line_lexer.o line_syntax.o line_parser.o parser.o quirk shell.o
 	$(CC) $(CFLAGS) -o zhsh util.o line_lexer.o line_syntax.o line_parser.o parser.o quirk/echo.o quirk/env.o quirk/help.o quirk/ls.o quirk/quirk.o shell.o -lreadline
 
 .PHONY: clean
